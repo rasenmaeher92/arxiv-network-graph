@@ -80,11 +80,7 @@ h1 {
 }
 
 #maindiv {
-	width: 970px;
 	padding: 15px;
-	margin-left: auto;
-	margin-right: auto;
-
 	border-left: solid 1px #D6D3C5;
 	border-right: solid 1px #D6D3C5;
 
@@ -128,7 +124,7 @@ h1 {
 }
 #qfield {
   border: 5px solid white; 
-  width: 950px;
+  width: 100%;
   border: solid 1px #999;
 
   height: 40px;
@@ -257,7 +253,6 @@ ul.flashes li {
 }
 
 #pagebar {
-	width: 970px;
 	padding: 10px 15px 0px 15px;
 	margin-left: auto;
 	margin-right: auto;
@@ -285,7 +280,6 @@ ul.flashes li {
 #pagebar a:active{ text-decoration: none; color: #338;}
 
 .centerdiv {
-	width: 970px;
 	padding: 10px 15px 0px 15px;
 	margin-left: auto;
 	margin-right: auto;
@@ -342,6 +336,7 @@ ul.flashes li {
 }
 .twdiv {
 	margin-top:2px;
+	display: none;
 }
 .twimg {
 	width: 36px;

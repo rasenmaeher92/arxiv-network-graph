@@ -133,16 +133,18 @@ function addPapers(num, dynamic) {
     
     // rank by tfidf similarity
     ldiv.append('br');
-    var similar_span = ldiv.append('span').classed('sim', true).attr('id', 'sim'+p.pid).html('show similar');
-    similar_span.on('click', function(pid){ // attach a click handler to redirect for similarity search
-      return function() { window.location.replace('/' + pid); }
-    }(p.pid)); // closer over the paper id
+    var score = p.twtr_score_dec !== undefined ? p.twtr_score_dec : 0;
+    ldiv.append('span').html('Score: ' + score.toFixed(1));
+//    var similar_span = ldiv.append('span').classed('sim', true).attr('id', 'sim'+p.pid).html('show similar');
+//    similar_span.on('click', function(pid){ // attach a click handler to redirect for similarity search
+//      return function() { window.location.replace('/' + pid); }
+//    }(p.pid)); // closer over the paper id
 
     // var review_span = ldiv.append('span').classed('sim', true).attr('style', 'margin-left:5px; padding-left: 5px; border-left: 1px solid black;').append('a').attr('href', 'http://www.shortscience.org/paper?bibtexKey='+p.pid).html('review');
     var discuss_text = p.num_discussion === 0 ? 'discuss' : 'discuss [' + p.num_discussion + ']';
     var discuss_color = p.num_discussion === 0 ? 'black' : 'red';
     var review_span = ldiv.append('span').classed('sim', true).attr('style', 'margin-left:5px; padding-left: 5px; border-left: 1px solid black;')
-                      .append('a').attr('href', 'discuss?id='+strip_version(p.pid)).attr('style', 'color:'+discuss_color).html(discuss_text);
+                      .append('a').attr('href', 'notes?id='+strip_version(p.pid)).attr('style', 'color:'+discuss_color).html(discuss_text);
     ldiv.append('br');
 
     var lib_state_img = p.in_library === 1 ? 'static/saved.png' : 'static/save.png';
@@ -172,10 +174,6 @@ function addPapers(num, dynamic) {
 
     div.append('div').attr('style', 'clear:both');
 
-    if(typeof p.img !== 'undefined') {
-      div.append('div').classed('animg', true).append('img').attr('src', p.img);
-    }
-
     if(typeof p.abstract !== 'undefined') {
       var abdiv = div.append('span').classed('tt', true).html(p.abstract);
       if(dynamic) {
@@ -190,35 +188,20 @@ function addPapers(num, dynamic) {
         div.append('div').classed('inlibsof', true).html('In libraries of: ' + usrtxt);
       }
     }
-
-    // create the tweets
-    if(ix < tweets.length) {
-      var ix_tweets = tweets[ix].tweets; // looks a little weird, i know
-      var tdiv = div.append('div').classed('twdiv', true);
-      var tcontentdiv = div.append('div').classed('twcont', true);
-      tdiv.append('div').classed('tweetcount', true).text(tweets[ix].num_tweets + ' tweets:');
-      for(var j=0,m=ix_tweets.length;j<m;j++) {
-        var t = ix_tweets[j];
-        var border_col = t.ok ? '#3c3' : '#fff'; // distinguish non-boring tweets visually making their border green
-        var timgdiv = tdiv.append('img').classed('twimg', true).attr('src', t.image_url)
-                          .attr('style', 'border: 2px solid ' + border_col + ';');
-        var act_fun = function(elt, txt, tname, tid, imgelt){  // mouseover handler: show tweet text.
-          return function() {
-            elt.attr('style', 'display:block;'); // make visible
-            elt.html(''); // clear it
-            elt.append('div').append('a').attr('href', 'https://twitter.com/' + tname + '/status/' + tid).attr('target', '_blank')
-                                         .attr('style', 'font-weight:bold; color:#05f; text-decoration:none;').text('@' + tname + ':'); // show tweet source
-            elt.append('div').text(txt) // show tweet text
-            imgelt.attr('style', 'border: 2px solid #05f;'); 
-          }
-        }(tcontentdiv, t.text, t.screen_name, t.id, timgdiv)
-        timgdiv.on('mouseover', act_fun);
-        timgdiv.on('click', act_fun);
-        timgdiv.on('mouseout', function(elt, col){
-          return function() { elt.attr('style', 'border: 2px solid ' + col + ';'); }
-        }(timgdiv, border_col));
-      }
+    if (p.twtr_links !== undefined) {
+        var tweets_div_id = `tweets-${ix}`;
+        div.append('div').html('<button>Show tweets</button>').attr('target', '#' + tweets_div_id).on('click', function() {
+            $($(this).attr('target')).show();
+        });
+        var tdiv = div.append('div').classed('twdiv', true).attr('id', tweets_div_id);
+        p.twtr_links.map( function (t, idx) {
+            var cur_d = tdiv.append('div');
+            cur_d.append('a').attr('href', 'https://twitter.com/' + t.tname + '/status/' + t.tid)
+            .attr('target', '_blank').text(`${t.tname}`);
+            cur_d.append('span').text(` - ♡${t.likes}  ♺${t.rt}`);
+        })
     }
+
 
     if(render_format == 'paper' && ix === 0) {
       // lets insert a divider/message

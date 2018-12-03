@@ -1,16 +1,15 @@
+import datetime
 import os
 import json
 import time
 import pickle
 import argparse
 import dateutil.parser
-from random import shuffle, randrange, uniform
+from random import randrange, uniform
 
-import numpy as np
 from sqlite3 import dbapi2 as sqlite3
-from hashlib import md5
 from flask import Flask, request, session, url_for, redirect, \
-     render_template, abort, g, flash, _app_ctx_stack
+     render_template, g, flash
 from flask_limiter import Limiter
 from werkzeug import check_password_hash, generate_password_hash
 import pymongo
@@ -81,44 +80,25 @@ def teardown_request(exception):
 # -----------------------------------------------------------------------------
 
 def papers_search(qraw):
-  qparts = qraw.lower().strip().split() # split by spaces
+    return list(db_papers.find({'$text': {'$search': qraw}}).limit(50))
+
+  # qparts = qraw.lower().strip().split() # split by spaces
   # use reverse index and accumulate scores
-  scores = []
-  for pid,p in db.items():
-    score = sum(SEARCH_DICT[pid].get(q,0) for q in qparts)
-    if score == 0:
-      continue # no match whatsoever, dont include
-    # give a small boost to more recent papers
-    score += 0.0001*p['tscore']
-    scores.append((score, p))
-  scores.sort(reverse=True, key=lambda x: x[0]) # descending
-  out = [x[1] for x in scores if x[0] > 0]
-  return out
+  # scores = []
+  # for pid,p in db.items():
+  #   score = sum(SEARCH_DICT[pid].get(q,0) for q in qparts)
+  #   if score == 0:
+  #     continue # no match whatsoever, dont include
+  #   # give a small boost to more recent papers
+  #   score += 0.0001*p['tscore']
+  #   scores.append((score, p))
+  # scores.sort(reverse=True, key=lambda x: x[0]) # descending
+  # out = [x[1] for x in scores if x[0] > 0]
 
 def papers_similar(pid):
-  rawpid = strip_version(pid)
-
-  # check if we have this paper at all, otherwise return empty list
-  if not rawpid in db: 
+    rawpid = strip_version(pid)
     return []
 
-  # check if we have distances to this specific version of paper id (includes version)
-  if pid in sim_dict:
-    # good, simplest case: lets return the papers
-    return [db[strip_version(k)] for k in sim_dict[pid]]
-  else:
-    # ok we don't have this specific version. could be a stale URL that points to, 
-    # e.g. v1 of a paper, but due to an updated version of it we only have v2 on file
-    # now. We want to use v2 in that case.
-    # lets try to retrieve the most recent version of this paper we do have
-    kok = [k for k in sim_dict if rawpid in k]
-    if kok:
-      # ok we have at least one different version of this paper, lets use it instead
-      id_use_instead = kok[0]
-      return [db[strip_version(k)] for k in sim_dict[id_use_instead]]
-    else:
-      # return just the paper. we dont have similarities for it for some reason
-      return [db[rawpid]]
 
 def papers_from_library():
   out = []
@@ -127,8 +107,7 @@ def papers_from_library():
     uid = session['user_id']
     user_library = query_db('''select * from library where user_id = ?''', [uid])
     libids = [strip_version(x['paper_id']) for x in user_library]
-    out = [db[x] for x in libids]
-    out = sorted(out, key=lambda k: k['updated'], reverse=True)
+    out = list(db_papers.find({'_id': {'$in': libids}}).sort("time_updated", pymongo.DESCENDING))
   return out
 
 def papers_from_svm(recent_days=None):
@@ -192,7 +171,9 @@ def encode_json(ps, n=10, send_images=True, send_abstracts=True):
     struct['published_time'] = '%s/%s/%s' % (timestruct.month, timestruct.day, timestruct.year)
     timestruct = dateutil.parser.parse(p['published'])
     struct['originally_published_time'] = '%s/%s/%s' % (timestruct.month, timestruct.day, timestruct.year)
-
+    struct['twtr_score_dec'] = p.get('twtr_score_dec', 0)
+    struct['twtr_score'] = p.get('twtr_score', 0)
+    struct['twtr_links'] = p.get('twtr_links', [])
     # fetch amount of discussion on this paper
     struct['num_discussion'] = comments.count({ 'pid': p['_rawid'] })
 
@@ -226,7 +207,7 @@ def default_context(papers, **kws):
   except Exception as e:
     print(e)
 
-  ans = dict(papers=top_papers, numresults=len(papers), totpapers=len(db), tweets=[], msg='', show_prompt=show_prompt, pid_to_users={})
+  ans = dict(papers=top_papers, numresults=len(papers), totpapers=len(papers), tweets=[], msg='', show_prompt=show_prompt, pid_to_users={})
   ans.update(kws)
   return ans
 
@@ -244,7 +225,7 @@ def goaway():
 @app.route("/")
 def intmain():
   vstr = request.args.get('vfilter', 'all')
-  papers = [db[pid] for pid in DATE_SORTED_PIDS] # precomputed
+  papers = list(db_papers.find().sort("time_published", pymongo.ASCENDING).limit(20))
   papers = papers_filter_version(papers, vstr)
   ctx = default_context(papers, render_format='recent',
                         msg='Showing most recent Arxiv papers:')
@@ -258,11 +239,11 @@ def rank(request_pid=None):
   ctx = default_context(papers, render_format='paper')
   return render_template('main.html', **ctx)
 
-@app.route('/discuss', methods=['GET'])
+@app.route('/notes', methods=['GET'])
 def discuss():
   """ return discussion related to a paper """
   pid = request.args.get('id', '') # paper id of paper we wish to discuss
-  papers = [db[pid]] if pid in db else []
+  papers = list(db_papers.find({'_id': pid}))
 
   # fetch the comments
   comms_cursor = comments.find({ 'pid':pid }).sort([('time_posted', pymongo.DESCENDING)])
@@ -280,6 +261,11 @@ def discuss():
   ctx = default_context(papers, render_format='default', comments=comms, gpid=pid, tags=TAGS, tag_counts=tag_counts)
   return render_template('discuss.html', **ctx)
 
+
+def get_paper(pid):
+    return list(db_papers.find({'_id': pid}).limit(1))
+
+
 @app.route('/comment', methods=['POST'])
 def comment():
   """ user wants to post a comment """
@@ -294,8 +280,9 @@ def comment():
   # process the raw pid and validate it, etc
   try:
     pid = request.form['pid']
-    if not pid in db: raise Exception("invalid pid")
-    version = db[pid]['_version'] # most recent version of this paper
+    cur_p = get_paper(pid)
+    if not cur_p: raise Exception("invalid pid")
+    version = cur_p[0]['_version'] # most recent version of this paper
   except Exception as e:
     print(e)
     return 'bad pid. This is most likely Andrej\'s fault.'
@@ -326,9 +313,10 @@ def discussions():
   have = set()
   for e in comms_cursor:
     pid = e['pid']
-    if pid in db and not pid in have:
+    cur_p = get_paper(pid)
+    if cur_p and not pid in have:
       have.add(pid)
-      papers.append(db[pid])
+      papers.append(cur_p)
 
   ctx = default_context(papers, render_format="discussions")
   return render_template('main.html', **ctx)
@@ -375,19 +363,6 @@ def search():
   ctx = default_context(papers, render_format="search")
   return render_template('main.html', **ctx)
 
-@app.route('/recommend', methods=['GET'])
-def recommend():
-  """ return user's svm sorted list """
-  ttstr = request.args.get('timefilter', 'week') # default is week
-  vstr = request.args.get('vfilter', 'all') # default is all (no filter)
-  legend = {'day':1, '3days':3, 'week':7, 'month':30, 'year':365}
-  tt = legend.get(ttstr, None)
-  papers = papers_from_svm(recent_days=tt)
-  papers = papers_filter_version(papers, vstr)
-  ctx = default_context(papers, render_format='recommend',
-                        msg='Recommended papers: (based on SVM trained on tfidf of papers in your library, refreshed every day or so)' if g.user else 'You must be logged in and have some papers saved in your library.')
-  return render_template('main.html', **ctx)
-
 @app.route('/top', methods=['GET'])
 def top():
   """ return top papers """
@@ -406,17 +381,20 @@ def top():
 @app.route('/toptwtr', methods=['GET'])
 def toptwtr():
   """ return top papers """
-  ttstr = request.args.get('timefilter', 'day') # default is day
-  tweets_top = {'day':tweets_top1, 'week':tweets_top7, 'month':tweets_top30}[ttstr]
-  cursor = tweets_top.find().sort([('vote', pymongo.DESCENDING)]).limit(100)
+  ttstr = request.args.get('timefilter', 'week') # default is day
+  legend = {'day': 1, '3days': 3, 'week': 7, 'month': 30, 'year': 365, 'alltime': 10000}
+  days = legend.get(ttstr)
+  dnow_utc = datetime.datetime.now()
+  dminus = dnow_utc - datetime.timedelta(days=int(days))
   papers, tweets = [], []
-  for rec in cursor:
-    if rec['pid'] in db:
-      papers.append(db[rec['pid']])
-      tweet = {k:v for k,v in rec.items() if k != '_id'}
-      tweets.append(tweet)
+  papers = list(db_papers.find({'time_published': {'$gt': dminus}}).sort('twtr_score_dec', pymongo.DESCENDING))
+  # for rec in cursor:
+  #   if rec['pid'] in db:
+  #     papers.append(db[rec['pid']])
+  #     tweet = {k:v for k,v in rec.items() if k != '_id'}
+  #     tweets.append(tweet)
   ctx = default_context(papers, render_format='toptwtr', tweets=tweets,
-                        msg='Top papers mentioned on Twitter over last ' + ttstr + ':')
+                        msg=f'Top papers mentioned on Twitter over last {days} days')
   return render_template('main.html', **ctx)
 
 @app.route('/library')
@@ -443,7 +421,8 @@ def review():
   if not isvalidid(idvv):
     return 'NO' # fail, malformed id. weird.
   pid = strip_version(idvv)
-  if not pid in db:
+  cur_p = get_paper(pid)
+  if not cur_p:
     return 'NO' # we don't know this paper. wat
 
   uid = session['user_id'] # id of logged in user
@@ -471,56 +450,9 @@ def review():
 
   return ret
 
-@app.route('/friends', methods=['GET'])
-def friends():
-    
-    ttstr = request.args.get('timefilter', 'week') # default is week
-    legend = {'day':1, '3days':3, 'week':7, 'month':30, 'year':365}
-    tt = legend.get(ttstr, 7)
-
-    papers = []
-    pid_to_users = {}
-    if g.user:
-        # gather all the people we are following
-        username = get_username(session['user_id'])
-        edges = list(follow_collection.find({ 'who':username }))
-        # fetch all papers in all of their libraries, and count the top ones
-        counts = {}
-        for edict in edges:
-            whom = edict['whom']
-            uid = get_user_id(whom)
-            user_library = query_db('''select * from library where user_id = ?''', [uid])
-            libids = [strip_version(x['paper_id']) for x in user_library]
-            for lid in libids:
-                if not lid in counts:
-                    counts[lid] = []
-                counts[lid].append(whom)
-
-        keys = list(counts.keys())
-        keys.sort(key=lambda k: len(counts[k]), reverse=True) # descending by count
-        papers = [db[x] for x in keys]
-        # finally filter by date
-        curtime = int(time.time()) # in seconds
-        papers = [x for x in papers if curtime - x['time_published'] < tt*24*60*60]
-        # trim at like 100
-        if len(papers) > 100: papers = papers[:100]
-        # trim counts as well correspondingly
-        pid_to_users = { p['_rawid'] : counts.get(p['_rawid'], []) for p in papers }
-
-    if not g.user:
-        msg = "You must be logged in and follow some people to enjoy this tab."
-    else:
-        if len(papers) == 0:
-            msg = "No friend papers present. Try to extend the time range, or add friends by clicking on your account name (top, right)"
-        else:
-            msg = "Papers in your friend's libraries:"
-
-    ctx = default_context(papers, render_format='friends', pid_to_users=pid_to_users, msg=msg)
-    return render_template('main.html', **ctx)
-
 @app.route('/account')
 def account():
-    ctx = { 'totpapers':len(db) }
+    ctx = { 'totpapers': 100 }
 
     followers = []
     following = []
@@ -540,62 +472,6 @@ def account():
     ctx['following'] = following
     return render_template('account.html', **ctx)
 
-@app.route('/requestfollow', methods=['POST'])
-def requestfollow():
-    if request.form['newf'] and g.user:
-        # add an entry: this user is requesting to follow a second user
-        who = get_username(session['user_id'])
-        whom = request.form['newf']
-        # make sure whom exists in our database
-        whom_id = get_user_id(whom)
-        if whom_id is not None:
-            e = { 'who':who, 'whom':whom, 'active':0, 'time_request':int(time.time()) }
-            print('adding request follow:')
-            print(e)
-            follow_collection.insert_one(e)
-
-    return redirect(url_for('account'))
-
-@app.route('/removefollow', methods=['POST'])
-def removefollow():
-    user = request.form['user']
-    lst = request.form['lst']
-    if user and lst:
-        username = get_username(session['user_id'])
-        if lst == 'followers':
-            # user clicked "X" in their followers list. Erase the follower of this user
-            who = user
-            whom = username
-        elif lst == 'following':
-            # user clicked "X" in their following list. Stop following this user.
-            who = username
-            whom = user
-        else:
-            return 'NOTOK'
-
-        delq = { 'who':who, 'whom':whom }
-        print('deleting from follow collection:', delq)
-        follow_collection.delete_one(delq)
-        return 'OK'
-    else:
-        return 'NOTOK'
-
-@app.route('/addfollow', methods=['POST'])
-def addfollow():
-    user = request.form['user']
-    lst = request.form['lst']
-    if user and lst:
-        username = get_username(session['user_id'])
-        if lst == 'followers':
-            # user clicked "OK" in the followers list, wants to approve some follower. make active.
-            who = user
-            whom = username
-            delq = { 'who':who, 'whom':whom }
-            print('making active in follow collection:', delq)
-            follow_collection.update_one(delq, {'$set':{'active':1}})
-            return 'OK'
-        
-    return 'NOTOK'
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -655,15 +531,15 @@ if __name__ == "__main__":
     os.system('sqlite3 as.db < schema.sql')
 
   print('loading the paper database', Config.db_serve_path)
-  db = pickle.load(open(Config.db_serve_path, 'rb'))
+  # db = pickle.load(open(Config.db_serve_path, 'rb'))
   
   print('loading tfidf_meta', Config.meta_path)
-  meta = pickle.load(open(Config.meta_path, "rb"))
-  vocab = meta['vocab']
-  idf = meta['idf']
+  # meta = pickle.load(open(Config.meta_path, "rb"))
+  # vocab = meta['vocab']
+  # idf = meta['idf']
 
   print('loading paper similarities', Config.sim_path)
-  sim_dict = pickle.load(open(Config.sim_path, "rb"))
+  sim_dict = {} # pickle.load(open(Config.sim_path, "rb"))
 
   print('loading user recommendations', Config.user_sim_path)
   user_sim = {}
@@ -679,22 +555,20 @@ if __name__ == "__main__":
   print('connecting to mongodb...')
   client = pymongo.MongoClient()
   mdb = client.arxiv
-  tweets_top1 = mdb.tweets_top1
-  tweets_top7 = mdb.tweets_top7
-  tweets_top30 = mdb.tweets_top30
+  db_papers = mdb.papers
+  tweets = mdb.tweets
+
   comments = mdb.comments
   tags_collection = mdb.tags
   goaway_collection = mdb.goaway
   follow_collection = mdb.follow
-  print('mongodb tweets_top1 collection size:', tweets_top1.count())
-  print('mongodb tweets_top7 collection size:', tweets_top7.count())
-  print('mongodb tweets_top30 collection size:', tweets_top30.count())
   print('mongodb comments collection size:', comments.count())
   print('mongodb tags collection size:', tags_collection.count())
   print('mongodb goaway collection size:', goaway_collection.count())
   print('mongodb follow collection size:', follow_collection.count())
   
   TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
+
 
   # start
   if args.prod:

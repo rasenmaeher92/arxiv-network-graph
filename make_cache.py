@@ -8,6 +8,7 @@ creates db2.p, which can be read by the server.
 
 import os
 import json
+import pymongo
 import time
 import pickle
 import dateutil.parser
@@ -24,9 +25,9 @@ print('loading the paper database', Config.db_path)
 db = pickle.load(open(Config.db_path, 'rb'))
 
 print('loading tfidf_meta', Config.meta_path)
-meta = pickle.load(open(Config.meta_path, "rb"))
-vocab = meta['vocab']
-idf = meta['idf']
+# meta = pickle.load(open(Config.meta_path, "rb"))
+# vocab = meta['vocab']
+# idf = meta['idf']
 
 print('decorating the database with additional information...')
 for pid,p in db.items():
@@ -61,6 +62,7 @@ CACHE['top_sorted_pids'] = [q[1] for q in top_paper_counts]
 # some utilities for creating a search index for faster search
 punc = "'!\"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'" # removed hyphen from string.punctuation
 trans_table = {ord(c): None for c in punc}
+
 def makedict(s, forceidf=None, scale=1.0):
   words = set(s.lower().translate(trans_table).strip().split())
   idfd = {}
@@ -85,17 +87,26 @@ def merge_dicts(dlist):
 
 print('building an index for faster search...')
 search_dict = {}
-for pid,p in db.items():
-  dict_title = makedict(p['title'], forceidf=5, scale=3)
-  dict_authors = makedict(' '.join(x['name'] for x in p['authors']), forceidf=5)
-  dict_categories = {x['term'].lower():5 for x in p['tags']}
-  if 'and' in dict_authors: 
-    # special case for "and" handling in authors list
-    del dict_authors['and']
-  dict_summary = makedict(p['summary'])
-  search_dict[pid] = merge_dicts([dict_title, dict_authors, dict_categories, dict_summary])
+# for pid,p in db.items():
+#   dict_title = makedict(p['title'], forceidf=5, scale=3)
+#   dict_authors = makedict(' '.join(x['name'] for x in p['authors']), forceidf=5)
+#   dict_categories = {x['term'].lower():5 for x in p['tags']}
+#   if 'and' in dict_authors:
+#     # special case for "and" handling in authors list
+#     del dict_authors['and']
+#   dict_summary = makedict(p['summary'])
+#   search_dict[pid] = merge_dicts([dict_title, dict_authors, dict_categories, dict_summary])
 CACHE['search_dict'] = search_dict
 
+
+client = pymongo.MongoClient()
+mdb = client.arxiv
+papers = mdb.papers
+for key, val in db.items():
+  val['_id'] = key
+
+papers.remove()
+papers.insert_many(list(db.values()))
 # save the cache
 print('writing', Config.serve_cache_path)
 safe_pickle_dump(CACHE, Config.serve_cache_path)
