@@ -176,6 +176,7 @@ def fetch_tweets():
             to_insert.append(tweet)
         else:
             tweets.update(tweet_id_q, {'$set': tweet}, True)
+        logger.info(f'Found tweet for {arxiv_pids} with {tweet["likes"]} likes')
 
     if to_insert:
         tweets.insert_many(to_insert)
