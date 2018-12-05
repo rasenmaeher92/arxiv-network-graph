@@ -1,3 +1,4 @@
+import atexit
 import datetime
 import os
 import json
@@ -8,11 +9,17 @@ import dateutil.parser
 from random import randrange, uniform
 
 from sqlite3 import dbapi2 as sqlite3
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
      render_template, g, flash
 from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
 import pymongo
+
+from fetch_papers import fetch_papers_main
+from twitter_daemon import main_twitter_fetcher
 
 from utils import safe_pickle_dump, strip_version, isvalidid, Config
 
@@ -26,7 +33,7 @@ else:
   SECRET_KEY = 'devkey, should be in a file'
 app = Flask(__name__)
 app.config.from_object(__name__)
-limiter = Limiter(app, global_limits=["100 per hour", "20 per minute"])
+limiter = Limiter(app, key_func=get_remote_address, default_limits=["100 per hour", "20 per minute"])
 
 # -----------------------------------------------------------------------------
 # utilities for database interactions 
@@ -82,18 +89,6 @@ def teardown_request(exception):
 def papers_search(qraw):
     return list(db_papers.find({'$text': {'$search': qraw}}).limit(50))
 
-  # qparts = qraw.lower().strip().split() # split by spaces
-  # use reverse index and accumulate scores
-  # scores = []
-  # for pid,p in db.items():
-  #   score = sum(SEARCH_DICT[pid].get(q,0) for q in qparts)
-  #   if score == 0:
-  #     continue # no match whatsoever, dont include
-  #   # give a small boost to more recent papers
-  #   score += 0.0001*p['tscore']
-  #   scores.append((score, p))
-  # scores.sort(reverse=True, key=lambda x: x[0]) # descending
-  # out = [x[1] for x in scores if x[0] > 0]
 
 def papers_similar(pid):
     rawpid = strip_version(pid)
@@ -513,14 +508,23 @@ def logout():
   flash('You were logged out')
   return redirect(url_for('intmain'))
 
+@app.route('/network')
+def network():
+  return render_template('network.html')
+
+# @app.route('/state/<path:path>')
+# def send_js(path):
+#     return send_from_directory('js', path)
+
 # -----------------------------------------------------------------------------
 # int main
 # -----------------------------------------------------------------------------
+
 if __name__ == "__main__":
-   
   parser = argparse.ArgumentParser()
   parser.add_argument('-p', '--prod', dest='prod', action='store_true', help='run in prod?')
-  parser.add_argument('-r', '--num_results', dest='num_results', type=int, default=200, help='number of results to return per query')
+  parser.add_argument('-r', '--num_results', dest='num_results', type=int, default=200,
+                      help='number of results to return per query')
   parser.add_argument('--port', dest='port', type=int, default=5000, help='port to serve on')
   args = parser.parse_args()
   print(args)
@@ -532,20 +536,20 @@ if __name__ == "__main__":
 
   print('loading the paper database', Config.db_serve_path)
   # db = pickle.load(open(Config.db_serve_path, 'rb'))
-  
+
   print('loading tfidf_meta', Config.meta_path)
   # meta = pickle.load(open(Config.meta_path, "rb"))
   # vocab = meta['vocab']
   # idf = meta['idf']
 
   print('loading paper similarities', Config.sim_path)
-  sim_dict = {} # pickle.load(open(Config.sim_path, "rb"))
+  sim_dict = {}  # pickle.load(open(Config.sim_path, "rb"))
 
   print('loading user recommendations', Config.user_sim_path)
   user_sim = {}
   if os.path.isfile(Config.user_sim_path):
     user_sim = pickle.load(open(Config.user_sim_path, 'rb'))
-  
+
   print('loading serve cache...', Config.serve_cache_path)
   cache = pickle.load(open(Config.serve_cache_path, "rb"))
   DATE_SORTED_PIDS = cache['date_sorted_pids']
@@ -566,9 +570,15 @@ if __name__ == "__main__":
   print('mongodb tags collection size:', tags_collection.count())
   print('mongodb goaway collection size:', goaway_collection.count())
   print('mongodb follow collection size:', follow_collection.count())
-  
+
   TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
 
+  scheduler = BackgroundScheduler()
+  scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
+  scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=6)
+
+  scheduler.start()
+  atexit.register(lambda: scheduler.shutdown())
 
   # start
   if args.prod:
@@ -578,6 +588,7 @@ if __name__ == "__main__":
     from tornado.httpserver import HTTPServer
     from tornado.ioloop import IOLoop
     from tornado.log import enable_pretty_logging
+
     enable_pretty_logging()
     http_server = HTTPServer(WSGIContainer(app))
     http_server.listen(args.port)

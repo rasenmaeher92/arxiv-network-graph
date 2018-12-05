@@ -43,16 +43,77 @@ def parse_arxiv_url(url):
     assert len(parts) == 2, 'error parsing url ' + url
     return parts[0], int(parts[1])
 
+def fetch_entries(base_url, query):
+    with urllib.request.urlopen(base_url + query) as url:
+        response = url.read()
+    parse = feedparser.parse(response)
+    num_added = 0
+    num_skipped = 0
+    for e in parse.entries:
+
+        j = encode_feedparser_dict(e)
+
+        # extract just the raw arxiv id and version for this paper
+        rawid, version = parse_arxiv_url(j['id'])
+        j['_rawid'] = rawid
+        j['_version'] = version
+
+        # add to our database if we didn't have it before, or if this is a new version
+        cur_id = {'_id': rawid}
+        cur_paper = list(papers.find(cur_id))
+        j['time_updated'] = dateutil.parser.parse(j['updated'])
+        j['time_published'] = dateutil.parser.parse(j['published'])
+
+        if not cur_paper or j['_version'] > cur_paper[0]['_version']:
+            papers.update(cur_id, {'$set': j}, True)
+            num_added += 1
+        else:
+            num_skipped += 1
+
+    return num_added, num_skipped
+
+
+DEF_QUERY = 'cat:cs.CV+OR+cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+cat:stat.ML'
+
+
+def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, wait_time=5, search_query=DEF_QUERY, break_on_no_added=1):
+    # main loop where we fetch the new results
+    num_added_total = 0
+    for i in range(start_index, max_index, results_per_iteration):
+        num_failures = 0
+
+        print("Results %i - %i" % (i, i + results_per_iteration))
+        query = 'search_query=%s&sortBy=lastUpdatedDate&start=%i&max_results=%i' % (search_query, i, results_per_iteration)
+        while num_failures < 10:
+            num_added, num_skipped = fetch_entries(base_url, query)
+            if num_added == 0 and num_skipped > 0 and break_on_no_added == 1:
+                print('No new papers were added. Assuming no new papers exist. Exiting.')
+                return
+
+            elif num_added + num_skipped > 0:
+                print('Added %d papers, already had %d.' % (num_added, num_skipped))
+                break
+            else:
+                print('Received no results from arxiv. Retrying after sleep')
+                num_failures += 1
+                time.sleep(5)
+        # print some information
+
+
+        print(f'Sleeping for {wait_time} seconds')
+        time.sleep(wait_time + random.uniform(0, 3))
+
+
 if __name__ == "__main__":
 
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--search-query', type=str,
-                        default='cat:cs.CV+OR+cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+cat:stat.ML',
+                        default=DEF_QUERY,
                         help='query used for arxiv API. See http://arxiv.org/help/api/user-manual#detailed_examples')
     parser.add_argument('--start-index', type=int, default=0, help='0 = most recent API result')
-    parser.add_argument('--max-index', type=int, default=10000, help='upper bound on paper index we will fetch')
-    parser.add_argument('--results-per-iteration', type=int, default=100, help='passed to arxiv API')
+    parser.add_argument('--max-index', type=int, default=3000, help='upper bound on paper index we will fetch')
+    parser.add_argument('--results-per-iteration', type=int, default=200, help='passed to arxiv API')
     parser.add_argument('--wait-time', type=float, default=5.0, help='lets be gentle to arxiv API (in number of seconds)')
     parser.add_argument('--break-on-no-added', type=int, default=1, help='break out early if all returned query papers are already in db? 1=yes, 0=no')
     args = parser.parse_args()
@@ -65,69 +126,20 @@ if __name__ == "__main__":
     mdb = client.arxiv
     papers = mdb.papers
 
-    # -----------------------------------------------------------------------------
-    # main loop where we fetch the new results
-    num_added_total = 0
-    for i in range(args.start_index, args.max_index, args.results_per_iteration):
+    fetch_papers_main(args.start_index, args.max_index, args.results_per_iteration, args.wait_time, args.search_query, args.break_on_no_added)
 
-        print("Results %i - %i" % (i, i+args.results_per_iteration))
-        query = 'search_query=%s&sortBy=lastUpdatedDate&start=%i&max_results=%i' % (args.search_query,
-                                                                                    i, args.results_per_iteration)
-        with urllib.request.urlopen(base_url+query) as url:
-            response = url.read()
-        parse = feedparser.parse(response)
-        num_added = 0
-        num_skipped = 0
-        for e in parse.entries:
+    # res = papers.create_index(
+    #     [
+    #         ('title', 'text'),
+    #         ('authors.name', 'text'),
+    #         ('summary', 'text'),
+    #         ('tags.term', 'text')
+    #     ],
+    #     weights={
+    #         'title': 10,
+    #         'authors.name': 5,
+    #         'summary': 5,
+    #         'tags.term': 5,
+    #     }
+    # )
 
-            j = encode_feedparser_dict(e)
-
-            # extract just the raw arxiv id and version for this paper
-            rawid, version = parse_arxiv_url(j['id'])
-            j['_rawid'] = rawid
-            j['_version'] = version
-
-            # add to our database if we didn't have it before, or if this is a new version
-            cur_id = {'_id': rawid}
-            cur_paper = list(papers.find(cur_id))
-            j['time_updated'] = dateutil.parser.parse(j['updated'])
-            j['time_published'] = dateutil.parser.parse(j['published'])
-
-            if not cur_paper or j['_version'] > cur_paper[0]['_version']:
-                papers.update(cur_id, {'$set': j}, True)
-                num_added += 1
-            else:
-                num_skipped += 1
-
-        # print some information
-        print('Added %d papers, already had %d.' % (num_added, num_skipped))
-
-        if len(parse.entries) == 0:
-            print('Received no results from arxiv. Rate limiting? Exiting. Restart later maybe.')
-            print(response)
-            break
-
-        if num_added == 0 and args.break_on_no_added == 1:
-            print('No new papers were added. Assuming no new papers exist. Exiting.')
-            break
-
-        print('Sleeping for %i seconds' % (args.wait_time , ))
-        time.sleep(args.wait_time + random.uniform(0, 3))
-
-    res = papers.create_index(
-        [
-            ('title', 'text'),
-            ('authors.name', 'text'),
-            ('summary', 'text'),
-            ('tags.term', 'text')
-        ],
-        weights={
-            'title': 10,
-            'authors.name': 5,
-            'summary': 5,
-            'tags.term': 5,
-        }
-    )
-
-    print(res)
-    # min_record = papers.find().sort("time_published", pymongo.ASCENDING).limit(1)
