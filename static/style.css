@@ -75,7 +75,6 @@ h1 {
 	border-bottom: 1px solid #540000;
 }
 #tittxt {
-	width: 500px;
 	display: inline-block;
 }
 
@@ -100,7 +99,6 @@ h1 {
 }
 .paperdesc {
 	float: left;
-	width: 750px;
 }
 
 .dllinks {
@@ -173,7 +171,7 @@ h1 {
 #userinfo {
 	position: absolute;
 	top: 10px;
-	right: 150px;
+	right: 10px;
 	color: white;
 	font-size: 16px;
 }
@@ -324,16 +322,7 @@ ul.flashes li {
 	margin-left: 5px;
 	margin-right: 5px;
 }
-#banner {
-	border: 1px solid #9C9;
-	background-color: #DFD;
-	width: 980px;
-	margin-left: auto;
-	margin-right: auto;
-	margin-top: 10px;
-	padding: 10px;
-	text-align: center;
-}
+
 .twdiv {
 	margin-top:2px;
 	display: none;
