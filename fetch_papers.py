@@ -13,6 +13,8 @@ import argparse
 import urllib.request
 import feedparser
 
+from logger import logger_config
+
 logger = logging.getLogger(__name__)
 
 def encode_feedparser_dict(d):
@@ -105,6 +107,7 @@ def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, 
 
 if __name__ == "__main__":
 
+    logger_config()
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--search-query', type=str,

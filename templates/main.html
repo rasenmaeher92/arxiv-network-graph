@@ -76,7 +76,7 @@ $(document).ready(function(){
 		d3.select("#qfield").attr('value', urlq.replace(/\+/g, " "));
 	}
 
-  var vf = QueryString.vfilter; if(typeof vf === 'undefined') { vf = 'all'; }
+  var vf = QueryString.vfilter; if(typeof vf === 'undefined') { vf = 'published'; }
   var tf = QueryString.timefilter; if(typeof tf === 'undefined') { tf = 'week'; }
   var link_endpoint = '/';
   if(render_format === 'recent') { link_endpoint = ''; }
@@ -94,14 +94,14 @@ $(document).ready(function(){
   if(render_format === 'recommend' || render_format === 'top' || render_format === 'recent' || render_format === 'friends') {
     // insert version filtering options for these views
     var elt = d3.select('#recommend-time-choice');
-    var vflink = vf === 'all' ? '1' : 'all'; // toggle only showing v1 or not
+    var vflink = vf === 'published' ? 'last_updated' : 'published'; // toggle only showing v1 or not
     if(render_format === 'recent') {
       var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'&vfilter='+vflink); // leave out timefilter from this page
     } else {
       var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'timefilter='+time_range+'&vfilter='+vflink);
     }
-    var delt = aelt.append('div').classed('vchoice', true).html('Only show v1');
-    if(vf === '1') { delt.classed('vchoice-selected', true); }
+    var delt = aelt.append('div').classed('vchoice', true).html('Sort by last update');
+    if(vf === 'last_updated') { delt.classed('vchoice-selected', true); }
   }
 
   // time choices for recommend/top

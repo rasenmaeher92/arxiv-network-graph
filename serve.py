@@ -221,8 +221,11 @@ def goaway():
 
 @app.route("/")
 def intmain():
-  vstr = request.args.get('vfilter', 'all')
-  papers = list(db_papers.find().sort("time_published", pymongo.DESCENDING).limit(100))
+  vstr = request.args.get('vfilter', 'time_published')
+  if vstr != 'time_published':
+      vstr = 'time_updated'
+
+  papers = list(db_papers.find().sort(vstr, pymongo.DESCENDING).limit(100))
   papers = papers_filter_version(papers, vstr)
   ctx = default_context(papers, render_format='recent',
                         msg='Showing most recent Arxiv papers:')
