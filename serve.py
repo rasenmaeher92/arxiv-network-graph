@@ -542,7 +542,7 @@ if __name__ == "__main__":
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
-    scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=6)
+    scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=2)
 
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
