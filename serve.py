@@ -358,21 +358,6 @@ def search():
   ctx = default_context(papers, render_format="search")
   return render_template('main.html', **ctx)
 
-@app.route('/top', methods=['GET'])
-def top():
-  """ return top papers """
-  ttstr = request.args.get('timefilter', 'week') # default is week
-  vstr = request.args.get('vfilter', 'all') # default is all (no filter)
-  legend = {'day':1, '3days':3, 'week':7, 'month':30, 'year':365, 'alltime':10000}
-  tt = legend.get(ttstr, 7)
-  curtime = int(time.time()) # in seconds
-  top_sorted_papers = [db[p] for p in TOP_SORTED_PIDS]
-  papers = [p for p in top_sorted_papers if curtime - p['time_published'] < tt*24*60*60]
-  papers = papers_filter_version(papers, vstr)
-  ctx = default_context(papers, render_format='top',
-                        msg='Top papers based on people\'s libraries:')
-  return render_template('main.html', **ctx)
-
 @app.route('/toptwtr', methods=['GET'])
 def toptwtr():
   """ return top papers """
@@ -549,12 +534,6 @@ if __name__ == "__main__":
   user_sim = {}
   if os.path.isfile(Config.user_sim_path):
     user_sim = pickle.load(open(Config.user_sim_path, 'rb'))
-
-  print('loading serve cache...', Config.serve_cache_path)
-  cache = pickle.load(open(Config.serve_cache_path, "rb"))
-  DATE_SORTED_PIDS = cache['date_sorted_pids']
-  TOP_SORTED_PIDS = cache['top_sorted_pids']
-  SEARCH_DICT = cache['search_dict']
 
   print('connecting to mongodb...')
   client = pymongo.MongoClient()
