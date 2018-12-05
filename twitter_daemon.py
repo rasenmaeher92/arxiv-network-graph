@@ -142,7 +142,9 @@ def fetch_tweets():
     papers_to_update = []
 
     for r in results:
-
+        if hasattr(r, 'retweeted_status'):
+            logger.info('Tweet is a retweet')
+            r = r.retweeted_status
         arxiv_pids = extract_arxiv_pids(r)
         # arxiv_pids = list(db_papers.find({'_id': {'$in': arxiv_pids}}))  # filter to those that are in our paper db
         if not arxiv_pids: continue  # nothing we know about here, lets move on

@@ -500,7 +500,7 @@ def logout():
 
 @app.route('/network')
 def network():
-  return render_template('network.html')
+  return render_template('network_vis.html')
 
 # @app.route('/state/<path:path>')
 # def send_js(path):
