@@ -129,19 +129,3 @@ if __name__ == "__main__":
     papers = mdb.papers
 
     fetch_papers_main(args.start_index, args.max_index, args.results_per_iteration, args.wait_time, args.search_query, args.break_on_no_added)
-
-    # res = papers.create_index(
-    #     [
-    #         ('title', 'text'),
-    #         ('authors.name', 'text'),
-    #         ('summary', 'text'),
-    #         ('tags.term', 'text')
-    #     ],
-    #     weights={
-    #         'title': 10,
-    #         'authors.name': 5,
-    #         'summary': 5,
-    #         'tags.term': 5,
-    #     }
-    # )
-
