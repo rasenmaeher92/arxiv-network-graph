@@ -56,7 +56,8 @@ def get_latest_or_loop(q):
         except Exception as e:
             logger.info('there was some problem (waiting some time and trying again):')
             logger.error(e)
-        time.sleep(sleep_time)
+
+    logger.info('Fetched results')
     return results
 
 epochd = datetime.datetime(1970,1,1,tzinfo=pytz.utc) # time of epoch
@@ -176,7 +177,8 @@ def fetch_tweets():
         else:
             tweets.update(tweet_id_q, {'$set': tweet}, True)
 
-    if to_insert: tweets.insert_many(to_insert)
+    if to_insert:
+        tweets.insert_many(to_insert)
     logger.info('processed %d/%d new tweets. Currently maintaining total %d' % (len(to_insert), len(results), tweets.count()))
     return papers_to_update
 
@@ -199,3 +201,5 @@ tweets = mdb.tweets # the "tweets" collection in "arxiv" database
 db_papers = mdb.papers
 
 # main loop
+if __name__ == '__main__':
+    main_twitter_fetcher()
