@@ -1,5 +1,6 @@
 #!/bin/bash
 
+. venv/bin/activate
 git pull
 pids=$(pgrep python)
 kill -9 $pids
