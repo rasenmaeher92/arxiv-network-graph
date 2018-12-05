@@ -131,6 +131,8 @@ def get_banned():
         print('banning users:', list(banned.keys()))
     return banned
 
+
+
 def fetch_tweets():
     banned = get_banned()
     dnow_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -140,11 +142,15 @@ def fetch_tweets():
     to_insert = []
 
     papers_to_update = []
+    unique_tweet_ids = set()
 
     for r in results:
         if hasattr(r, 'retweeted_status'):
             logger.info('Tweet is a retweet')
             r = r.retweeted_status
+
+        if r.id_str in unique_tweet_ids: continue
+
         arxiv_pids = extract_arxiv_pids(r)
         # arxiv_pids = list(db_papers.find({'_id': {'$in': arxiv_pids}}))  # filter to those that are in our paper db
         if not arxiv_pids: continue  # nothing we know about here, lets move on
@@ -178,6 +184,8 @@ def fetch_tweets():
             to_insert.append(tweet)
         else:
             tweets.update(tweet_id_q, {'$set': tweet}, True)
+
+        unique_tweet_ids.add(r.id_str)
         logger.info(f'Found tweet for {arxiv_pids} with {tweet["likes"]} likes')
 
     if to_insert:
