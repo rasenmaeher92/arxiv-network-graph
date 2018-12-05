@@ -55,7 +55,7 @@ def get_latest_or_loop(q):
             results = api.search(q=q, count=100, result_type="mixed")
         except Exception as e:
             logger.info('there was some problem (waiting some time and trying again):')
-        print(e)
+            logger.error(e)
         time.sleep(sleep_time)
     return results
 
