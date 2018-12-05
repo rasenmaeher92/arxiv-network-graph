@@ -1,5 +1,6 @@
 import atexit
 import datetime
+import logging
 import os
 import json
 import time
@@ -19,6 +20,7 @@ from werkzeug import check_password_hash, generate_password_hash
 import pymongo
 
 from fetch_papers import fetch_papers_main
+from logger import logger_config
 from twitter_daemon import main_twitter_fetcher
 
 from utils import safe_pickle_dump, strip_version, isvalidid, Config
@@ -506,73 +508,56 @@ def network():
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-p', '--prod', dest='prod', action='store_true', help='run in prod?')
-  parser.add_argument('-r', '--num_results', dest='num_results', type=int, default=200,
-                      help='number of results to return per query')
-  parser.add_argument('--port', dest='port', type=int, default=5000, help='port to serve on')
-  args = parser.parse_args()
-  print(args)
+    logger_config()
+    logger = logging.getLogger(__name__)
 
-  if not os.path.isfile(Config.database_path):
-    print('did not find as.db, trying to create an empty database from schema.sql...')
-    print('this needs sqlite3 to be installed!')
-    os.system('sqlite3 as.db < schema.sql')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--prod', dest='prod', action='store_true', help='run in prod?')
+    parser.add_argument('-r', '--num_results', dest='num_results', type=int, default=200,
+                        help='number of results to return per query')
+    parser.add_argument('--port', dest='port', type=int, default=5000, help='port to serve on')
+    args = parser.parse_args()
+    logger.info(args)
 
-  print('loading the paper database', Config.db_serve_path)
-  # db = pickle.load(open(Config.db_serve_path, 'rb'))
+    if not os.path.isfile(Config.database_path):
+        logger.info('did not find as.db, trying to create an empty database from schema.sql...')
+        logger.info('this needs sqlite3 to be installed!')
+        os.system('sqlite3 as.db < schema.sql')
 
-  print('loading tfidf_meta', Config.meta_path)
-  # meta = pickle.load(open(Config.meta_path, "rb"))
-  # vocab = meta['vocab']
-  # idf = meta['idf']
+    logger.info('connecting to mongodb...')
+    client = pymongo.MongoClient()
+    mdb = client.arxiv
+    db_papers = mdb.papers
+    tweets = mdb.tweets
 
-  print('loading paper similarities', Config.sim_path)
-  sim_dict = {}  # pickle.load(open(Config.sim_path, "rb"))
+    comments = mdb.comments
+    tags_collection = mdb.tags
+    goaway_collection = mdb.goaway
+    follow_collection = mdb.follow
 
-  print('loading user recommendations', Config.user_sim_path)
-  user_sim = {}
-  if os.path.isfile(Config.user_sim_path):
-    user_sim = pickle.load(open(Config.user_sim_path, 'rb'))
+    TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
 
-  print('connecting to mongodb...')
-  client = pymongo.MongoClient()
-  mdb = client.arxiv
-  db_papers = mdb.papers
-  tweets = mdb.tweets
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
+    scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=6)
 
-  comments = mdb.comments
-  tags_collection = mdb.tags
-  goaway_collection = mdb.goaway
-  follow_collection = mdb.follow
-  print('mongodb comments collection size:', comments.count())
-  print('mongodb tags collection size:', tags_collection.count())
-  print('mongodb goaway collection size:', goaway_collection.count())
-  print('mongodb follow collection size:', follow_collection.count())
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown())
 
-  TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
+    # start
+    if args.prod:
+        # run on Tornado instead, since running raw Flask in prod is not recommended
+        logger.info('starting tornado!')
+        from tornado.wsgi import WSGIContainer
+        from tornado.httpserver import HTTPServer
+        from tornado.ioloop import IOLoop
+        from tornado.log import enable_pretty_logging
 
-  scheduler = BackgroundScheduler()
-  scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
-  scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=6)
-
-  scheduler.start()
-  atexit.register(lambda: scheduler.shutdown())
-
-  # start
-  if args.prod:
-    # run on Tornado instead, since running raw Flask in prod is not recommended
-    print('starting tornado!')
-    from tornado.wsgi import WSGIContainer
-    from tornado.httpserver import HTTPServer
-    from tornado.ioloop import IOLoop
-    from tornado.log import enable_pretty_logging
-
-    enable_pretty_logging()
-    http_server = HTTPServer(WSGIContainer(app))
-    http_server.listen(args.port)
-    IOLoop.instance().start()
-  else:
-    print('starting flask!')
-    app.debug = False
-    app.run(port=args.port, host='0.0.0.0')
+        enable_pretty_logging()
+        http_server = HTTPServer(WSGIContainer(app))
+        http_server.listen(args.port)
+        IOLoop.instance().start()
+    else:
+        logger.info('starting flask!')
+        app.debug = False
+        app.run(port=args.port, host='0.0.0.0')

@@ -2,7 +2,7 @@
 Periodically checks Twitter for tweets about arxiv papers we recognize
 and logs the tweets into mongodb database "arxiv", under "tweets" collection.
 """
-
+import logging
 import os
 import re
 from collections import defaultdict
@@ -23,6 +23,8 @@ from utils import Config
 # -----------------------------------------------------------------------------
 sleep_time = 60*15 # in seconds, between twitter API calls. Default rate limit is 180 per 15 minutes
 max_tweet_records = 15
+
+logger = logging.getLogger(__name__)
 
 # convenience functions
 # -----------------------------------------------------------------------------
@@ -47,15 +49,15 @@ def extract_arxiv_pids(r):
   return pids
 
 def get_latest_or_loop(q):
-  results = None
-  while results is None:
-    try:
-      results = api.search(q=q, count=100, result_type="mixed")
-    except Exception as e:
-      print('there was some problem (waiting some time and trying again):')
-      print(e)
-      time.sleep(sleep_time)
-  return results
+    results = None
+    while results is None:
+        try:
+            results = api.search(q=q, count=100, result_type="mixed")
+        except Exception as e:
+            logger.info('there was some problem (waiting some time and trying again):')
+        print(e)
+        time.sleep(sleep_time)
+    return results
 
 epochd = datetime.datetime(1970,1,1,tzinfo=pytz.utc) # time of epoch
 
@@ -132,6 +134,7 @@ def fetch_tweets():
     banned = get_banned()
     dnow_utc = datetime.datetime.now(datetime.timezone.utc)
     # fetch the latest mentioning arxiv.org
+    logger.info('Fetching tweets')
     results = get_latest_or_loop('arxiv.org')
     to_insert = []
 
@@ -174,12 +177,11 @@ def fetch_tweets():
             tweets.update(tweet_id_q, {'$set': tweet}, True)
 
     if to_insert: tweets.insert_many(to_insert)
-    print('processed %d/%d new tweets. Currently maintaining total %d' % (len(to_insert), len(results), tweets.count()))
+    logger.info('processed %d/%d new tweets. Currently maintaining total %d' % (len(to_insert), len(results), tweets.count()))
     return papers_to_update
 
 
 def main_twitter_fetcher():
-    print('testtttt')
     papers_to_update = fetch_tweets()
     summarize_tweets(papers_to_update)
 

@@ -3,6 +3,7 @@ Queries arxiv API and downloads papers (the query is a parameter).
 The script is intended to enrich an existing database pickle (by default db.p),
 so this file will be loaded first, and then new results will be added to it.
 """
+import logging
 
 import dateutil.parser
 import pymongo
@@ -12,7 +13,7 @@ import argparse
 import urllib.request
 import feedparser
 
-from utils import Config, safe_pickle_dump
+logger = logging.getLogger(__name__)
 
 def encode_feedparser_dict(d):
     """
@@ -78,29 +79,27 @@ DEF_QUERY = 'cat:cs.CV+OR+cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+ca
 
 def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, wait_time=5, search_query=DEF_QUERY, break_on_no_added=1):
     # main loop where we fetch the new results
-    num_added_total = 0
     for i in range(start_index, max_index, results_per_iteration):
         num_failures = 0
 
-        print("Results %i - %i" % (i, i + results_per_iteration))
+        logger.info("Results %i - %i" % (i, i + results_per_iteration))
         query = 'search_query=%s&sortBy=lastUpdatedDate&start=%i&max_results=%i' % (search_query, i, results_per_iteration)
         while num_failures < 10:
             num_added, num_skipped = fetch_entries(base_url, query)
             if num_added == 0 and num_skipped > 0 and break_on_no_added == 1:
-                print('No new papers were added. Assuming no new papers exist. Exiting.')
+                logger.info('No new papers were added. Assuming no new papers exist. Exiting.')
                 return
 
             elif num_added + num_skipped > 0:
-                print('Added %d papers, already had %d.' % (num_added, num_skipped))
+                logger.info('Added %d papers, already had %d.' % (num_added, num_skipped))
                 break
             else:
-                print('Received no results from arxiv. Retrying after sleep')
+                logger.info('Received no results from arxiv. Retrying after sleep')
                 num_failures += 1
                 time.sleep(5)
         # print some information
 
-
-        print(f'Sleeping for {wait_time} seconds')
+        logger.info(f'Sleeping for {wait_time} seconds')
         time.sleep(wait_time + random.uniform(0, 3))
 
 
