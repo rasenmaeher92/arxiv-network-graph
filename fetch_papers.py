@@ -73,6 +73,11 @@ def fetch_entries(base_url, query):
         else:
             num_skipped += 1
 
+        if not cur_paper:
+            for a in j['authors']:
+                authors.update({'_id': a['name']}, {'$addToSet': {'papers': rawid}}, True)
+
+
     return num_added, num_skipped
 
 
@@ -127,5 +132,6 @@ if __name__ == "__main__":
     client = pymongo.MongoClient()
     mdb = client.arxiv
     papers = mdb.papers
+    authors = mdb.authors
 
     fetch_papers_main(args.start_index, args.max_index, args.results_per_iteration, args.wait_time, args.search_query, args.break_on_no_added)

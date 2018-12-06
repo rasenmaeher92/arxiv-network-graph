@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 import json
+import re
 import time
 import pickle
 import argparse
@@ -13,7 +14,7 @@ from sqlite3 import dbapi2 as sqlite3
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
-     render_template, g, flash
+    render_template, g, flash, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
@@ -35,7 +36,7 @@ else:
   SECRET_KEY = 'devkey, should be in a file'
 app = Flask(__name__)
 app.config.from_object(__name__)
-limiter = Limiter(app, key_func=get_remote_address, default_limits=["100 per hour", "20 per minute"])
+limiter = Limiter(app, key_func=get_remote_address, default_limits=["5000 per hour", "100 per minute"])
 
 # -----------------------------------------------------------------------------
 # utilities for database interactions 
@@ -107,27 +108,6 @@ def papers_from_library():
     out = list(db_papers.find({'_id': {'$in': libids}}).sort("time_updated", pymongo.DESCENDING))
   return out
 
-def papers_from_svm(recent_days=None):
-  out = []
-  if g.user:
-
-    uid = session['user_id']
-    if not uid in user_sim:
-      return []
-    
-    # we want to exclude papers that are already in user library from the result, so fetch them.
-    user_library = query_db('''select * from library where user_id = ?''', [uid])
-    libids = {strip_version(x['paper_id']) for x in user_library}
-
-    plist = user_sim[uid]
-    out = [db[x] for x in plist if not x in libids]
-
-    if recent_days is not None:
-      # filter as well to only most recent papers
-      curtime = int(time.time()) # in seconds
-      out = [x for x in out if curtime - x['time_published'] < recent_days*24*60*60]
-
-  return out
 
 def papers_filter_version(papers, v):
   if v != '1': 
@@ -502,9 +482,34 @@ def logout():
 def network():
   return render_template('network_vis.html')
 
-# @app.route('/state/<path:path>')
-# def send_js(path):
-#     return send_from_directory('js', path)
+
+@app.route('/categories')
+def categories():
+    return jsonify(ARXIV_CATEGORIES)
+
+
+@app.route('/author_papers')
+def author_papers():
+    authors = json.loads(request.args.get('q', ''))
+    papers = list(db_papers.find({'authors.name': {'$in': authors}}))
+    papers = [{'title': p['title'], 'url': p['link']} for p in papers]
+    return jsonify(papers)
+
+
+@app.route('/autocomplete')
+def autocomplete():
+    q = request.args.get('q', '')
+    if len(q) <= 2:
+        return jsonify([])
+
+    authors = list(db_authors.find({'_id': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(5))
+    authors = [{'name': a['_id'], 'type': 'author'} for a in authors]
+
+    papers = list(db_papers.find({'title': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(5))
+    papers = [{'name': p['title'], 'type': 'paper', 'authors': p['authors']} for p in papers]
+
+    return jsonify(authors + papers)
+
 
 # -----------------------------------------------------------------------------
 # int main
@@ -531,6 +536,7 @@ if __name__ == "__main__":
     client = pymongo.MongoClient()
     mdb = client.arxiv
     db_papers = mdb.papers
+    db_authors = mdb.authors
     tweets = mdb.tweets
 
     comments = mdb.comments
@@ -539,6 +545,7 @@ if __name__ == "__main__":
     follow_collection = mdb.follow
 
     TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
+    ARXIV_CATEGORIES = json.load(open('relevant_arxiv_categories.json', 'r'))
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
