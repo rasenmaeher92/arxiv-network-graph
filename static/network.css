@@ -145,3 +145,7 @@
     border-bottom: 1px solid rgba(0,0,0,.125);
     padding: .55rem 0.8rem;
 }
+
+.collapse-expand {
+    float: right;
+}

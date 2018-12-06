@@ -46,16 +46,32 @@ function draw_network(data) {
         },
         nodes: {
             shape: 'dot',
-            scaling: { min: 7,max: 60, label: false },
+            scaling: { min: 7,max: 50, label: false },
             font: {size: 14, face: 'Helvetica Neue, Helvetica, Arial'},
         },
         edges: {
             color: {
                 color: '#3287ec',
                 highlight:'#c107fb',
-            }
+                opacity: 0.3,
+            },
+            smooth: false,
+
         },
-        physics: false
+        physics: {
+            enabled: false,
+            stabilization: {
+              enabled: false,
+              iterations: 50,
+              updateInterval: 100,
+              onlyDynamicEdges: false,
+              fit: true
+            },
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: {
+                avoidOverlap: 1
+            }
+        }
     };
 
     // initialize your network!
@@ -68,7 +84,7 @@ function draw_network(data) {
                 papers += `<div class='papers-list-item'><a href=${cur_p.url}>${cur_p.title}</a></div>`
             });
 
-            $('#papers_list .title').html(`${sel_nodes[0]}\'s Papers`);
+            $('#papers_list .author_name').text(`${sel_nodes[0]}`);
             $('#papers_list').show();
             $('#papers_list .content').html(papers);
         });
@@ -80,8 +96,8 @@ function draw_network(data) {
     });
 }
 
-$.getJSON("static/authors_2.json", function (data) {
-    console.log('hello');
+$.getJSON("static/authors.json", function (data) {
+    console.log('Network graph was downloaded');
     base_data = data;
     draw_network(data);
 
@@ -165,7 +181,7 @@ var options = {
 };
 $("#searchInput").easyAutocomplete(options);
 
-$('#searchInput').on('keypress', function (e) {
+$('#searchInput').on('keypress', function(e) {
   if (e.which == 13) {
     var name = this.value.toLowerCase().split(' ').map((s) => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
     focus_on_node([{name: name}]);
@@ -173,4 +189,10 @@ $('#searchInput').on('keypress', function (e) {
   }
 });
 
-$('#reset_zoom').on('click', function (e) { network.fit()});
+$('#reset_zoom').on('click', function(e) { network.fit()});
+
+$('.collapse-expand').on('click', function(e) {
+    $('#papers_list .content').toggle();
+    $('.collapse-expand i').toggleClass('fa-minus');
+    $('.collapse-expand i').toggleClass('fa-plus');
+});
