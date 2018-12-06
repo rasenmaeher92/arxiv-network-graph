@@ -491,7 +491,7 @@ def categories():
 @app.route('/author_papers')
 def author_papers():
     authors = json.loads(request.args.get('q', ''))
-    papers = list(db_papers.find({'authors.name': {'$in': authors}}))
+    papers = list(db_papers.find({'authors.name': {'$in': authors}}).sort("time_published", pymongo.DESCENDING))
     papers = [{'title': p['title'], 'url': p['link']} for p in papers]
     return jsonify(papers)
 

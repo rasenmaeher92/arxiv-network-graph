@@ -51,9 +51,8 @@ function draw_network(data) {
         },
         edges: {
             color: {
-                color: '#3287ec',
+                color: 'rgba(50, 133, 236, 0.3)',
                 highlight:'#c107fb',
-                opacity: 0.3,
             },
             smooth: false,
 
