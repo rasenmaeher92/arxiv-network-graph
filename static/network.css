@@ -182,5 +182,5 @@ div.vis-network div.vis-navigation .vis-zoomIn {
 }
 
 #welcome {
-    z-index: 1000;
+    z-index: 9000;
 }
