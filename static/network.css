@@ -74,6 +74,7 @@
     width: 40px;
     height: 40px;
     background-color: #3287ec;
+    z-index: 100;
 
     margin: auto;
     -webkit-animation: sk-rotateplane 1.2s infinite ease-in-out;
@@ -178,4 +179,8 @@ div.vis-network div.vis-navigation .vis-zoomIn {
     margin-top: 5px;
     margin-left: 10px;
     margin-right: 30px;
+}
+
+#welcome {
+    z-index: 1000;
 }
