@@ -502,10 +502,11 @@ def autocomplete():
     if len(q) <= 2:
         return jsonify([])
 
-    authors = list(db_authors.find({'_id': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(5))
+    authors = list(db_authors.find({'_id': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(50))
+    authors = sorted(authors, key=lambda x: len(x['papers']), reverse=True)[:5]
     authors = [{'name': a['_id'], 'type': 'author'} for a in authors]
 
-    papers = list(db_papers.find({'title': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(5))
+    papers = list(db_papers.find({'title': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).sort("time_published", pymongo.DESCENDING).limit(5))
     papers = [{'name': p['title'], 'type': 'paper', 'authors': p['authors']} for p in papers]
 
     return jsonify(authors + papers)

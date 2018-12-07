@@ -123,7 +123,7 @@ function draw_network(data) {
         $.get('/author_papers', {q: JSON.stringify(sel_nodes)}, function(res) {
             var papers = '';
             res.map(function(cur_p) {
-                papers += `<div class='papers-list-item'><a href=${cur_p.url}>${cur_p.title}</a></div>`
+                papers += `<div class='papers-list-item'><a href=${cur_p.url} target='_blank'>${cur_p.title}</a></div>`
             });
 
             $('#papers_list .author_name').text(`${sel_nodes[0]}`);
