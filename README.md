@@ -9,7 +9,7 @@ MLG allows you to:
 2. Filter by topics (NLP, Vision, etc).
 3. Focus on specific author and explore his/her neighbors gradually.
 
-![user interface](https://raw.github.com/ranihorev/arxiv-network-graph/master/arxiv_graph.jpeg)
+![user interface](https://raw.github.com/ranihorev/arxiv-network-graph/master/arxiv_graph.jpg)
 
 The backend is based on arxiv-sanity but with a lot of modifications - all arXiv data is stored on MongoDB, rebuilt Twitter deamon, etc.
 
