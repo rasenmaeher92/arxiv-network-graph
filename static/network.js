@@ -43,11 +43,13 @@ function changeCursor(newCursorStyle){
 }
 
 function update_network(nodes_to_show) {
+    toggle_spinner(true);
     num_nodes = nodes_to_show.length;
     network.setData({nodes: nodes_to_show, edges: all_edges});
     network.stabilize();
     network.on('stabilizationIterationsDone', function() {
         setTimeout(function(){ network.fit(); }, 10);
+        toggle_spinner(false);
     });
 }
 
@@ -261,6 +263,7 @@ $('#focus').on('click', function(e) {
       }
     });
     update_network(nodes_to_show);
+    $('#expand').show();
 });
 
 $('#expand').on('click', function(e) {
@@ -303,10 +306,5 @@ $('#expand').on('click', function(e) {
 
 
 $('#reset').on('click', function(e) {
-    num_nodes = all_nodes.length;
-    toggle_spinner(true);
-    network.setData({nodes: all_nodes, edges: all_edges});
-    network.on('afterDrawing', function() {
-        toggle_spinner(false);
-    });
+    update_network(all_nodes);
 });

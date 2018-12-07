@@ -14,6 +14,7 @@
 </head>
 <body>
     <div class="wrap">
+        <a href="https://www.lyrn.ai" target="_blank"><img class="logo" src="static/logo.png"></a>
        <span class="search autocomplete">
           <input id="searchInput" type="text" class="searchTerm" placeholder="Search for a author or a paper...">
        </span>
@@ -29,6 +30,9 @@
           </div>
         </div>
         <div class="filters">
+            <button id="reset" class="btn btn-secondary btn-sm">Reset</button>
+        </div>
+        <div class="filters">
             <button id="redraw" class="btn btn-secondary btn-sm">Redraw</button>
         </div>
         <div class="filters">
@@ -37,11 +41,9 @@
         <div class="filters">
             <button id="expand" class="btn btn-secondary btn-sm">Show Neighbors</button>
         </div>
-        <div class="filters">
-            <button id="reset" class="btn btn-secondary btn-sm">Reset</button>
-        </div>
 
     </div>
+    <a href="https://github.com/you"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
     <div id="mynetwork"></div>
     <div class="spinner"></div>
     <div class="card" id="papers_list">
