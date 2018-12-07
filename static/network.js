@@ -5,6 +5,39 @@ var all_nodes;
 var all_edges;
 var num_nodes = 0;
 
+
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+    for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+function setCookie(cname, value, days) {
+
+    let max_age = '';
+    if (days) {
+        max_age = "; Max-Age=" + (days * 24 * 60 * 60)
+    }
+    let domain_text = '; Domain=' + window.location.hostname;
+    document.cookie = cname + "=" + value + max_age + domain_text + "; path=/";
+}
+
+
+function removeCookie(cname) {
+    setCookie(cname, '');
+}
+
 function focus_on_node(cur_authors) {
     var found = false;
     var focused = false;
@@ -47,10 +80,13 @@ function update_network(nodes_to_show, stabilize = true) {
     num_nodes = nodes_to_show.length;
     network.setData({nodes: nodes_to_show, edges: all_edges});
     if (stabilize) {
+        network.setOptions({physics: {enabled: true, solver: 'forceAtlas2Based', forceAtlas2Based: {avoidOverlap: 1}}});
         network.stabilize();
+
     }
     network.on('stabilizationIterationsDone', function() {
         setTimeout(function(){ network.fit(); }, 10);
+        network.setOptions({physics: false});
         toggle_spinner(false);
     });
 }
@@ -80,7 +116,7 @@ function draw_network(data) {
                 max: 60,
                 label: {
                     min: 14,
-                    max: 30,
+                    max: 25,
                     drawThreshold: 6,
                     maxVisible: 30
                 }
@@ -97,7 +133,7 @@ function draw_network(data) {
         },
         interaction: {
             navigationButtons: true,
-            keyboard: true,
+            keyboard: false,
             hideEdgesOnDrag: true,
             tooltipDelay: 100
         },
@@ -143,6 +179,13 @@ function draw_network(data) {
         changeCursor('pointer');
     });
 }
+
+if (getCookie('welcome') !== '1') {
+    $('#welcome').modal('show');
+}
+$('#welcome').on('hidden.bs.modal', function (e) {
+    setCookie('welcome', '1', 30);
+});
 
 toggle_spinner(true);
 $.getJSON("static/network_data.json", function (data) {
@@ -309,4 +352,27 @@ $('#expand').on('click', function(e) {
 
 $('#reset').on('click', function(e) {
     update_network(all_nodes, false);
+});
+
+$('#cluster').on('click', function(e) {
+    var cur_node_ids = network.body.nodeIndices;
+    num_components = Math.max.apply(Math, cur_node_ids.map(function(o) { return all_nodes.get(o).component; }))
+
+    for (var i = 0; i <= 2; i++) {
+          clusterOptionsByData = {
+              joinCondition: function (childOptions) {
+                  return childOptions.component == i; // the color is fully defined in the node.
+              },
+//              processProperties: function (clusterOptions, childNodes, childEdges) {
+//                  var totalMass = 0;
+//                  for (var i = 0; i < childNodes.length; i++) {
+//                      totalMass += childNodes[i].mass;
+//                  }
+//                  clusterOptions.mass = totalMass;
+//                  return clusterOptions;
+//              },
+//              clusterNodeProperties: {id: 'cluster:' + color, borderWidth: 3, shape: 'database', color:color, label:'color:' + color}
+          };
+          network.cluster(clusterOptionsByData);
+      }
 });
