@@ -149,3 +149,19 @@
 .collapse-expand {
     float: right;
 }
+
+div.vis-network div.vis-navigation .vis-zoomExtends {
+    bottom: 10px !important;
+    left: 185px !important;
+}
+
+div.vis-network div.vis-navigation .vis-zoomOut {
+    bottom: 10px !important;
+    left: 145px !important;
+}
+
+div.vis-network div.vis-navigation .vis-zoomIn {
+    bottom: 50px !important;
+    left: 145px !important;
+}
+

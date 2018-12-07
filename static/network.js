@@ -26,6 +26,31 @@ function focus_on_node(cur_authors) {
     }
 }
 
+function toggle_spinner(to_show) {
+    if (to_show) {
+        $('body').addClass('dark');
+        $('.spinner').show();
+    } else {
+        $('body').removeClass('dark');
+        $('.spinner').hide();
+    }
+}
+
+
+function changeCursor(newCursorStyle){
+    var networkCanvas = document.getElementById("mynetwork").getElementsByTagName("canvas")[0]
+    networkCanvas.style.cursor = newCursorStyle;
+}
+
+function update_network(nodes_to_show) {
+    num_nodes = nodes_to_show.length;
+    network.setData({nodes: nodes_to_show, edges: all_edges});
+    network.stabilize();
+    network.on('stabilizationIterationsDone', function() {
+        setTimeout(function(){ network.fit(); }, 10);
+    });
+}
+
 function draw_network(data) {
     all_nodes = new vis.DataSet(data['nodes']);
     num_nodes = all_nodes.length;
@@ -46,7 +71,16 @@ function draw_network(data) {
         },
         nodes: {
             shape: 'dot',
-            scaling: { min: 7,max: 50, label: false },
+            scaling: {
+                min: 7,
+                max: 60,
+                label: {
+                    min: 14,
+                    max: 35,
+                    drawThreshold: 6,
+                    maxVisible: 30
+                }
+            },
             font: {size: 14, face: 'Helvetica Neue, Helvetica, Arial'},
         },
         edges: {
@@ -57,20 +91,27 @@ function draw_network(data) {
             smooth: false,
 
         },
-        physics: {
-            enabled: false,
-            stabilization: {
-              enabled: false,
-              iterations: 50,
-              updateInterval: 100,
-              onlyDynamicEdges: false,
-              fit: true
-            },
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: {
-                avoidOverlap: 1
-            }
-        }
+        interaction: {
+            navigationButtons: true,
+            keyboard: true,
+            hideEdgesOnDrag: true,
+            tooltipDelay: 100
+        },
+        physics: false,
+//        {
+//            enabled: false,
+//            stabilization: {
+//              enabled: false,
+//              iterations: 50,
+//              updateInterval: 100,
+//              onlyDynamicEdges: false,
+//              fit: true
+//            },
+//            solver: 'forceAtlas2Based',
+//            forceAtlas2Based: {
+//                avoidOverlap: 1
+//            }
+//        }
     };
 
     // initialize your network!
@@ -93,15 +134,23 @@ function draw_network(data) {
 //          }
 //      }
     });
+
+    network.on('hoverNode', function () {
+        changeCursor('pointer');
+    });
 }
 
-$.getJSON("static/authors.json", function (data) {
+toggle_spinner(true);
+$.getJSON("static/network_data.json", function (data) {
     console.log('Network graph was downloaded');
     base_data = data;
     draw_network(data);
 
     var input = document.getElementById("searchInput");
     authors = Array.from(data.nodes, function(d){ return(d.id) });
+    network.on('afterDrawing', function() {
+        toggle_spinner(false);
+    });
 
 });
 
@@ -133,16 +182,19 @@ $("#categories_dropdown").on('click', '.dropdown-item', function(){
 });
 
 $('#redraw').on('click', function(e) {
-    if (num_nodes > 200) {
+    if (num_nodes > 400) {
         alert('This feature is too slow for over 200 nodes');
         return;
     }
-    $('body').addClass('dark');
-    $('.spinner').show();
+    toggle_spinner(true);
+    var cur_nodes = network.body.data.nodes.getIds();
+    for (i = 1; i < cur_nodes.length; i++) {
+        network.moveNode(cur_nodes[i],0,0);
+    };
     network.stabilize();
-    network.on('stabilized', function() {
-        $('body').removeClass('dark');
-        $('.spinner').hide();
+
+    network.on('stabilizationIterationsDone', function() {
+        toggle_spinner(false);
         setTimeout(function(){ network.fit(); }, 10);
 
     });
@@ -188,10 +240,73 @@ $('#searchInput').on('keypress', function(e) {
   }
 });
 
-$('#reset_zoom').on('click', function(e) { network.fit()});
-
 $('.collapse-expand').on('click', function(e) {
     $('#papers_list .content').toggle();
     $('.collapse-expand i').toggleClass('fa-minus');
     $('.collapse-expand i').toggleClass('fa-plus');
+});
+
+$('#focus').on('click', function(e) {
+    var sel_nodes = network.getSelectedNodes();
+    if (sel_nodes.length == 0) {
+        alert('Please select a node to focus on');
+        return;
+    }
+    var neighbours = network.getConnectedNodes(sel_nodes);
+    var to_show_ids = neighbours.concat(sel_nodes);
+
+    var nodes_to_show = all_nodes.get({
+      filter: function (item) {
+        return (to_show_ids.indexOf(item.id) >= 0);
+      }
+    });
+    update_network(nodes_to_show);
+});
+
+$('#expand').on('click', function(e) {
+    var sel_nodes = network.getSelectedNodes();
+    var sel_node = sel_nodes[0]
+    if (sel_nodes.length == 0) {
+        alert('Please select a node to expand its neighbors');
+        return;
+    }
+
+    // get edges of the selected node
+    var sel_node_edges = all_edges.get({
+      filter: function (item) {
+        return (item.from == sel_node) | (item.to == sel_node)
+      }
+    });
+
+    // Add current node neighbors to the currently displayed nodes
+    var to_show_ids = network.body.nodeIndices;
+    for( i=0; i < sel_node_edges.length; i++) {
+        if (sel_node_edges[i].from !== sel_node) {
+            to_show_ids.push(sel_node_edges[i].from);
+        } else {
+            to_show_ids.push(sel_node_edges[i].to);
+        }
+    }
+    // Remove duplicates
+    to_show_ids = Array.from(new Set(to_show_ids))
+
+    // Filter dataset
+    var nodes_to_show = all_nodes.get({
+      filter: function (item) {
+        return (to_show_ids.indexOf(item.id) >= 0);
+      }
+    });
+
+    update_network(nodes_to_show);
+
+});
+
+
+$('#reset').on('click', function(e) {
+    num_nodes = all_nodes.length;
+    toggle_spinner(true);
+    network.setData({nodes: all_nodes, edges: all_edges});
+    network.on('afterDrawing', function() {
+        toggle_spinner(false);
+    });
 });
