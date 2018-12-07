@@ -42,11 +42,13 @@ function changeCursor(newCursorStyle){
     networkCanvas.style.cursor = newCursorStyle;
 }
 
-function update_network(nodes_to_show) {
+function update_network(nodes_to_show, stabilize = true) {
     toggle_spinner(true);
     num_nodes = nodes_to_show.length;
     network.setData({nodes: nodes_to_show, edges: all_edges});
-    network.stabilize();
+    if (stabilize) {
+        network.stabilize();
+    }
     network.on('stabilizationIterationsDone', function() {
         setTimeout(function(){ network.fit(); }, 10);
         toggle_spinner(false);
@@ -78,7 +80,7 @@ function draw_network(data) {
                 max: 60,
                 label: {
                     min: 14,
-                    max: 35,
+                    max: 30,
                     drawThreshold: 6,
                     maxVisible: 30
                 }
@@ -306,5 +308,5 @@ $('#expand').on('click', function(e) {
 
 
 $('#reset').on('click', function(e) {
-    update_network(all_nodes);
+    update_network(all_nodes, false);
 });
