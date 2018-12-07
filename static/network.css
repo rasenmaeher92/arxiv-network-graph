@@ -113,14 +113,17 @@
 
 /* End of Spinner */
 
+.btn-secondary {
+    background-color: #004d83;
+    border: none;
+}
+
 #papers_list {
     display: none;
     position: absolute;
     right: 15px;
     bottom: 15px;
     width: 400px;
-    max-height: 300px;
-    overflow-y: auto;
     box-shadow: 0rem .5rem 1rem rgba(0,0,0,.3);
     background-color: #fff;
     border-radius: 0.3rem;
@@ -133,7 +136,8 @@
 }
 
 #papers_list .content {
-
+    overflow-y: auto;
+    max-height: 300px;
 }
 
 #papers_list .content a {
