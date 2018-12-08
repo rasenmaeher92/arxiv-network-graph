@@ -86,6 +86,7 @@ DEF_QUERY = 'cat:cs.CV+OR+cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+ca
 
 def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, wait_time=5, search_query=DEF_QUERY, break_on_no_added=1):
     # main loop where we fetch the new results
+    logger.info('Updating paper DB')
     for i in range(start_index, max_index, results_per_iteration):
         num_failures = 0
 
