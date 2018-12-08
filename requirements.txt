@@ -19,3 +19,4 @@ pymongo
 
 APScheduler
 fa2l
+requests

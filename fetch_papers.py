@@ -68,7 +68,7 @@ def fetch_entries(query):
         j['time_updated'] = dateutil.parser.parse(j['updated'])
         j['time_published'] = dateutil.parser.parse(j['published'])
 
-        if not cur_paper or j['_version'] > cur_paper[0]['_version']:
+        if not cur_paper or '_version' not in cur_paper[0] or j['_version'] > cur_paper[0]['_version']:
             papers.update(cur_id, {'$set': j}, True)
             num_added += 1
         else:
