@@ -16,6 +16,7 @@ import feedparser
 from logger import logger_config
 
 logger = logging.getLogger(__name__)
+BASE_URL = 'http://export.arxiv.org/api/query?' # base api query url
 
 def encode_feedparser_dict(d):
     """
@@ -46,8 +47,8 @@ def parse_arxiv_url(url):
     assert len(parts) == 2, 'error parsing url ' + url
     return parts[0], int(parts[1])
 
-def fetch_entries(base_url, query):
-    with urllib.request.urlopen(base_url + query) as url:
+def fetch_entries(query):
+    with urllib.request.urlopen(BASE_URL + query) as url:
         response = url.read()
     parse = feedparser.parse(response)
     num_added = 0
@@ -93,7 +94,7 @@ def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, 
         logger.info("Results %i - %i" % (i, i + results_per_iteration))
         query = 'search_query=%s&sortBy=lastUpdatedDate&start=%i&max_results=%i' % (search_query, i, results_per_iteration)
         while num_failures < 10:
-            num_added, num_skipped = fetch_entries(base_url, query)
+            num_added, num_skipped = fetch_entries(query)
             if num_added == 0 and num_skipped > 0 and break_on_no_added == 1:
                 logger.info('No new papers were added. Assuming no new papers exist. Exiting.')
                 return
@@ -127,7 +128,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # misc hardcoded variables
-    base_url = 'http://export.arxiv.org/api/query?' # base api query url
     print('Searching arXiv for %s' % (args.search_query, ))
 
     client = pymongo.MongoClient()
