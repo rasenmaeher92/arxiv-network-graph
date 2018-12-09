@@ -4,7 +4,7 @@ if __name__ == '__main__':
     client = pymongo.MongoClient()
     mdb = client.arxiv
     papers = mdb.papers
-
+    sem_sch_papers = mdb.sem_sch_papers
 
     res = papers.create_index(
         [
@@ -19,4 +19,10 @@ if __name__ == '__main__':
             'summary': 5,
             'tags.term': 5,
         }
+    )
+
+    res = sem_sch_papers.create_index(
+        [
+            ('title', 'text'),
+        ],
     )

@@ -12,6 +12,7 @@ from random import randrange, uniform
 
 from sqlite3 import dbapi2 as sqlite3
 
+import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, jsonify
@@ -20,6 +21,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
 import pymongo
 
+from fetch_citations_and_references import fetch_paper_data, send_query
 from fetch_papers import fetch_papers_main
 from logger import logger_config
 from twitter_daemon import main_twitter_fetcher
@@ -440,47 +442,52 @@ def account():
 
 @app.route('/login', methods=['POST'])
 def login():
-  """ logs in the user. if the username doesn't exist creates the account """
-  
-  if not request.form['username']:
-    flash('You have to enter a username')
-  elif not request.form['password']:
-    flash('You have to enter a password')
-  elif get_user_id(request.form['username']) is not None:
-    # username already exists, fetch all of its attributes
-    user = query_db('''select * from user where
-          username = ?''', [request.form['username']], one=True)
-    if check_password_hash(user['pw_hash'], request.form['password']):
-      # password is correct, log in the user
-      session['user_id'] = get_user_id(request.form['username'])
-      flash('User ' + request.form['username'] + ' logged in.')
-    else:
-      # incorrect password
-      flash('User ' + request.form['username'] + ' already exists, wrong password.')
-  else:
-    # create account and log in
-    creation_time = int(time.time())
-    g.db.execute('''insert into user (username, pw_hash, creation_time) values (?, ?, ?)''',
-      [request.form['username'], 
-      generate_password_hash(request.form['password']), 
-      creation_time])
-    user_id = g.db.execute('select last_insert_rowid()').fetchall()[0][0]
-    g.db.commit()
+    """ logs in the user. if the username doesn't exist creates the account """
 
-    session['user_id'] = user_id
-    flash('New account %s created' % (request.form['username'], ))
-  
-  return redirect(url_for('intmain'))
+    if not request.form['username']:
+        flash('You have to enter a username')
+    elif not request.form['password']:
+        flash('You have to enter a password')
+    elif get_user_id(request.form['username']) is not None:
+        # username already exists, fetch all of its attributes
+        user = query_db('''select * from user where
+          username = ?''', [request.form['username']], one=True)
+        if check_password_hash(user['pw_hash'], request.form['password']):
+            # password is correct, log in the user
+            session['user_id'] = get_user_id(request.form['username'])
+            flash('User ' + request.form['username'] + ' logged in.')
+        else:
+            # incorrect password
+            flash('User ' + request.form['username'] + ' already exists, wrong password.')
+    else:
+        # create account and log in
+        creation_time = int(time.time())
+        g.db.execute('''insert into user (username, pw_hash, creation_time) values (?, ?, ?)''',
+                     [request.form['username'],
+                      generate_password_hash(request.form['password']),
+                      creation_time])
+        user_id = g.db.execute('select last_insert_rowid()').fetchall()[0][0]
+        g.db.commit()
+
+        session['user_id'] = user_id
+        flash('New account %s created' % (request.form['username'], ))
+
+    return redirect(url_for('intmain'))
 
 @app.route('/logout')
 def logout():
-  session.pop('user_id', None)
-  flash('You were logged out')
-  return redirect(url_for('intmain'))
+    session.pop('user_id', None)
+    flash('You were logged out')
+    return redirect(url_for('intmain'))
 
 @app.route('/network')
 def network():
-  return render_template('network_vis.html')
+    return render_template('network_vis.html')
+
+
+@app.route('/citations_network')
+def citations_network():
+    return render_template('citations_network.html')
 
 
 @app.route('/categories')
@@ -494,6 +501,55 @@ def author_papers():
     papers = list(db_papers.find({'authors.name': {'$in': authors}}).sort("time_published", pymongo.DESCENDING))
     papers = [{'title': p['title'], 'url': p['link']} for p in papers]
     return jsonify(papers)
+
+
+def add_new_paper_to_db(res):
+
+    sem_sch_papers.update({'_id': res['_id']}, {'$set': res}, True)
+    for a in res['authors']:
+        sem_sch_authors.update({'_id': a['name']}, {}, True)
+
+
+@app.route('/get_paper')
+def get_paper():
+    id = request.args.get('id', '') or request.args.get('sem_id', '')
+    if id:
+        paper = sem_sch_papers.find_one({'$or': [{'_id': id}, {'paperId': id}]})
+        if not paper:
+            is_arxiv = '.' in id
+            paper = send_query({'_id': id}, is_arxiv=is_arxiv)
+            if paper:
+                add_new_paper_to_db(paper)
+
+        if paper:
+            fields = ['title', '_id', 'paper_id', 'authors', 'citations', 'references', 'time_published', 'year']
+            res = {f: paper.get(f, None) for f in fields}
+            res['id'] = id
+            return jsonify(res)
+
+    return jsonify({'error': 'Paper id is missing'}), 404
+
+
+@app.route('/get_author')
+def get_author():
+    name = request.args.get('name', '')
+    papers = list(sem_sch_papers.find({'authors.name': name}))
+    return jsonify(papers)
+
+
+@app.route('/autocomplete_2')
+def autocomplete_2():
+    q = request.args.get('q', '')
+    if len(q) <= 1:
+        return jsonify([])
+
+    authors = list(sem_sch_authors.find({'_id': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(7))
+    authors = [{'name': a['_id'], 'type': 'author'} for a in authors]
+
+    papers = list(sem_sch_papers.find({'$or': [{'_id': q}, {'$text': {'$search': q}}]}).limit(7))
+    papers = [{'name': p['title'], 'type': 'paper', 'id': p['_id'], 'sem_id': p.get('paperId', '')} for p in papers]
+
+    return jsonify(authors + papers)
 
 
 @app.route('/autocomplete')
@@ -539,6 +595,8 @@ if __name__ == "__main__":
     db_papers = mdb.papers
     db_authors = mdb.authors
     tweets = mdb.tweets
+    sem_sch_papers = mdb.sem_sch_papers
+    sem_sch_authors = mdb.sem_sch_authors
 
     comments = mdb.comments
     tags_collection = mdb.tags

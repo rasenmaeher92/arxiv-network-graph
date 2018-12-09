@@ -78,7 +78,6 @@ def fetch_entries(query):
             for a in j['authors']:
                 authors.update({'_id': a['name']}, {'$addToSet': {'papers': rawid}}, True)
 
-
     return num_added, num_skipped
 
 
