@@ -27,11 +27,19 @@
 <body>
     <div id="main" class="main-center">
         <div class="main-section">
-            <a href="https://www.lyrn.ai" target="_blank"><img class="logo" src="static/logo.png"></a>
+            <a href="https://www.lyrn.ai" target="_blank"><img id="logo" class="logo-center" src="static/logo.png"></a>
         </div>
         <div class="main-section search">
-            <input id="searchInput" type="text" class="searchTerm" placeholder="Search for a author or a paper...">
+            <input id="searchInput" type="text" class="searchTerm" placeholder="Search for an author, a paper name, or an arXiv ID...">
             <span class="clear-input"><i class="fas fa-times"></i></span>
+        </div>
+        <div id="main-text" class="main-section">
+            <p>
+                Explore ML papers by navigating through authors, references and citations.
+            </p>
+            <p>
+                Click on a node to view its details and double click to expand it.
+            </p>
         </div>
         <div class="main-section filters-wrapper">
             <div class="filters">
