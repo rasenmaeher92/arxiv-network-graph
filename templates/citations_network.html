@@ -5,6 +5,7 @@
     <title>LyrnAI - ML World Map</title>
      <meta name="description" content="All Machine Learning papers on one graph">
     <meta property="og:image" content="https://arxiv.lyrn.ai/static/og_image.jpg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='lyrn_favicon.png') }}" />
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -43,7 +44,7 @@
                 Click on a node to view its details and double click to expand it.
             </p>
         </div>
-        <div class="main-section filters-wrapper">
+        <div id="filters-wrapper" class="main-section hidden">
             <div class="filters">
                 <button id="redraw" class="btn btn-secondary btn-sm">Rearrange</button>
             </div>

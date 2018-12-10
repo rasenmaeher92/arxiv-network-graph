@@ -13,10 +13,16 @@ body {
 .main-center {
     position: absolute;
     top: 35%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     left: 50%;
     z-index: 1000;
     text-align: center;
+}
+
+#main-text {
+    margin-top: 20px;
+    width: 390px;
+    font-size: 13px;
 }
 
 .search {
@@ -24,7 +30,7 @@ body {
 }
 
 #searchInput {
-    width: 340px;
+    width: 360px;
     padding: 5px 20px 5px 8px;
     height: 20px;
     outline: none;
@@ -37,6 +43,29 @@ body {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1) inset;
     color: #555;
     float: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media only screen and (min-width: 768px) {
+    .inline-desktop {
+        display: inline;
+    }
+}
+@media only screen and (max-width: 768px) {
+    #searchInput, #main-text {
+        width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    #filters-wrapper {
+        display: inline-block;
+        margin-top: 10px;
+    }
+
 }
 
 #searchInput:focus{
@@ -53,10 +82,6 @@ body {
 
 * {
    box-sizing: content-box;
-}
-
-.filters-wrapper {
-    display: none;
 }
 
 .filters {
@@ -243,8 +268,3 @@ div.vis-network div.vis-navigation .vis-zoomIn {
     z-index: 9000;
 }
 
-#main-text {
-    margin-top: 20px;
-    width: 370px;
-    font-size: 13px;
-}

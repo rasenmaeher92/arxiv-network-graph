@@ -288,7 +288,7 @@ function init_network_events() {
 }
 
 function draw_network(data, is_paper, author) {
-    $('.filters-wrapper').show();
+    $('#filters-wrapper').removeClass('hidden');
     var edges = [];
     var nodes = [];
     if (is_paper) {
@@ -316,7 +316,7 @@ function draw_network(data, is_paper, author) {
     $('#mynetwork').addClass('network');
     $('#main').addClass('main-top');
     $('#main').removeClass('main-center');
-    $('#main .main-section').css('display', 'inline');
+    $('#main .main-section').addClass('inline-desktop');
     $('#logo').addClass('logo-top').removeClass('logo-center');
     $('#main-text').hide();
     network = new vis.Network(container, graph_data, network_options);
