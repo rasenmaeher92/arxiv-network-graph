@@ -18,6 +18,12 @@ from logger import logger_config
 logger = logging.getLogger(__name__)
 BASE_URL = 'http://export.arxiv.org/api/query?' # base api query url
 
+client = pymongo.MongoClient()
+mdb = client.arxiv
+papers = mdb.papers
+authors = mdb.authors
+
+
 def encode_feedparser_dict(d):
     """
     helper function to get rid of feedparser bs with a deep copy.
@@ -128,10 +134,5 @@ if __name__ == "__main__":
 
     # misc hardcoded variables
     print('Searching arXiv for %s' % (args.search_query, ))
-
-    client = pymongo.MongoClient()
-    mdb = client.arxiv
-    papers = mdb.papers
-    authors = mdb.authors
 
     fetch_papers_main(args.start_index, args.max_index, args.results_per_iteration, args.wait_time, args.search_query, args.break_on_no_added)
