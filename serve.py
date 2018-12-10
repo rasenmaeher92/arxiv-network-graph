@@ -510,6 +510,11 @@ def add_new_paper_to_db(res):
         sem_sch_authors.update({'_id': a['name']}, {}, True)
 
 
+def record_request(obj_id, obj_type, ):
+    is_first = int(request.args.get('first', 0))
+    network_requests.insert_one({'id': obj_id, 'type': obj_type, 'dt': datetime.datetime.utcnow(), 'ip': request.remote_addr,
+                                 'session': request.cookies.get('session', ''), 'is_first': is_first})
+
 @app.route('/get_paper')
 def get_paper():
     id = request.args.get('id', '') or request.args.get('sem_id', '')
@@ -525,6 +530,7 @@ def get_paper():
             fields = ['title', '_id', 'paper_id', 'authors', 'citations', 'references', 'time_published', 'year']
             res = {f: paper.get(f, None) for f in fields}
             res['id'] = id
+            record_request(id, 'paper')
             return jsonify(res)
 
     return jsonify({'error': 'Paper id is missing'}), 404
@@ -534,6 +540,7 @@ def get_paper():
 def get_author():
     name = request.args.get('name', '')
     papers = list(sem_sch_papers.find({'authors.name': name}))
+    record_request(name, 'author')
     return jsonify(papers)
 
 
@@ -597,6 +604,8 @@ if __name__ == "__main__":
     tweets = mdb.tweets
     sem_sch_papers = mdb.sem_sch_papers
     sem_sch_authors = mdb.sem_sch_authors
+
+    network_requests = mdb.network_requests
 
     comments = mdb.comments
     tags_collection = mdb.tags

@@ -326,6 +326,7 @@ function draw_network(data, is_paper, author) {
 
 
 function fetch_data_and_draw(cur_s) {
+    cur_s['first'] = 1;
     if (cur_s.type == 'paper') {
         $.get('/get_paper', cur_s, function(res) {
             draw_network(res, true);
