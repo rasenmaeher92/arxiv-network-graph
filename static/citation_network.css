@@ -188,6 +188,12 @@ body {
     border-radius: 0.3rem;
 }
 
+@media only screen and (max-width: 576px) {
+    #node_data {
+        max-width: 90%;
+    }
+}
+
 #node_data .title {
   background-color: #3287ec;
   padding: .5rem 10px;
