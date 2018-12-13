@@ -6,6 +6,9 @@ import json
 import re
 import time
 import argparse
+import uuid
+from collections import Counter
+
 import dateutil.parser
 from random import randrange, uniform
 
@@ -13,7 +16,7 @@ from sqlite3 import dbapi2 as sqlite3
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
-    render_template, g, flash, jsonify
+    render_template, g, flash, jsonify, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
@@ -37,6 +40,8 @@ else:
 app = Flask(__name__)
 app.config.from_object(__name__)
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["5000 per hour", "100 per minute"])
+
+REQUESTER_COOKIE = 'network_requester'
 
 # -----------------------------------------------------------------------------
 # utilities for database interactions 
@@ -485,7 +490,9 @@ def network():
 
 @app.route('/citations_network')
 def citations_network():
-    return render_template('citations_network.html')
+    resp = make_response(render_template('citations_network.html'))
+    resp.set_cookie(REQUESTER_COOKIE, str(uuid.uuid4()))
+    return resp
 
 
 @app.route('/categories')
@@ -508,10 +515,10 @@ def add_new_paper_to_db(res):
         sem_sch_authors.update({'_id': a['name']}, {}, True)
 
 
-def record_request(obj_id, obj_type, ):
+def record_request(obj_id, obj_type):
     is_first = int(request.args.get('first', 0))
     network_requests.insert_one({'id': obj_id, 'type': obj_type, 'dt': datetime.datetime.utcnow(), 'ip': request.remote_addr,
-                                 'session': request.cookies.get('session', ''), 'is_first': is_first})
+                                 'session': request.cookies.get(REQUESTER_COOKIE, ''), 'is_first': is_first})
 
 @app.route('/get_paper')
 def get_paper():
@@ -532,6 +539,17 @@ def get_paper():
             return jsonify(res)
 
     return jsonify({'error': 'Paper id is missing'}), 404
+
+
+@app.route('/popular_queries')
+def popular_queries():
+    now = datetime.datetime.utcnow()
+    max_age = now - datetime.timedelta(days=7)
+    new_reqs = network_requests.find({'$and': [{'dt': {'$gt': max_age}}]}) # {'is_first': True},
+    new_reqs = set([(r['id'], r['type'], r['ip']) for r in new_reqs])
+    cnt = Counter([(r[0], r[1]) for r in new_reqs])
+    most_common = cnt.most_common(5)
+    return jsonify(most_common)
 
 
 @app.route('/get_author')
