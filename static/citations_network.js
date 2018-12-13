@@ -118,7 +118,7 @@ function handle_references(data, nodes, edges) {
         });
         edges.push(...references_edges);
         nodes.push(...data.references.map(function(ref) {
-            return {id: ref.arxivId || ref.paperId, label: ref.title.substring(0,30) + '...', title: ref.title, group: 'references'}
+            return {id: ref.arxivId || ref.paperId, label: ref.title.substring(0,30) + '...', title: ref.title, group: 'references', year: ref.year}
         }));
     }
 
@@ -131,7 +131,7 @@ function handle_citations(data, nodes, edges) {
         });
         edges.push(...citations_edges);
         nodes.push(...data.citations.map(function(ref) {
-            return {id: ref.arxivId || ref.paperId, label: ref.title.substring(0,30) + '...', title: ref.title, group: 'citations'}
+            return {id: ref.arxivId || ref.paperId, label: ref.title.substring(0,30) + '...', title: ref.title, group: 'citations', year: ref.year}
         }));
     }
 }
@@ -287,12 +287,45 @@ function init_network_events() {
     });
 }
 
+function init_date_filter() {
+    var slider = document.getElementById('years_slider');
+
+    noUiSlider.create(slider, {
+        start: [1970, 2019],
+        connect: true,
+        range: {
+            'min': 1970,
+            'max': 2019
+        },
+        step: 1,
+        tooltips: true,
+        format: {
+            to: function ( value ) {
+                return value;
+            },
+            from: function ( value ) {
+                return value;
+            }
+        },
+
+    });
+
+    slider.noUiSlider.on('set', function (values) {
+        var cur_nodes = all_nodes.get({
+          filter: function (item) {
+            return item.year >= values[0] && item.year <= values[1]
+          }
+        });
+         network.setData({nodes: cur_nodes, edges: all_edges});
+    });
+}
+
 function draw_network(data, is_paper, author) {
     $('#filters-wrapper').removeClass('hidden');
     var edges = [];
     var nodes = [];
     if (is_paper) {
-        nodes = [{id: data.id, label: data.title, title: data.title, group: 'papers'}];
+        nodes = [{id: data.id, label: data.title, title: data.title, group: 'papers', year: data.year}];
         handle_references(data, nodes, edges);
         handle_citations(data, nodes, edges);
         handle_authors(data, nodes, edges);
@@ -416,3 +449,5 @@ $('.clear-input').on('click', function(e) {
 });
 
 $('#page_info').on('click', function(e) {$('#welcome').modal('show');});
+
+init_date_filter();

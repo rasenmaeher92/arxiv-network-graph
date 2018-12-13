@@ -49,6 +49,41 @@ body {
     display: none !important;
 }
 
+#years_slider {
+    width: 500px;
+    display: inline-block;
+}
+
+.noUi-horizontal {
+    height: 10px;
+}
+
+.noUi-connect {
+    background: #004d83;
+}
+
+.noUi-horizontal .noUi-handle {
+    height: 20px;
+    width: 28px;
+}
+
+.noUi-handle:before, .noUi-handle:after {
+    height: 8px;
+    top: 5px;
+}
+
+.noUi-handle:before {
+    left: 11px;
+}
+
+.noUi-handle:after {
+    left: 14px;
+}
+
+.noUi-handle:focus {
+    outline: none;
+}
+
 @media only screen and (min-width: 768px) {
     .inline-desktop {
         display: inline;
@@ -64,6 +99,9 @@ body {
     #filters-wrapper {
         display: inline-block;
         margin-top: 10px;
+    }
+    #years_slider {
+        max-width: 80%;
     }
 
 }
