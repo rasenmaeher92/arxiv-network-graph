@@ -5,14 +5,12 @@ import os
 import json
 import re
 import time
-import pickle
 import argparse
 import dateutil.parser
 from random import randrange, uniform
 
 from sqlite3 import dbapi2 as sqlite3
 
-import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, jsonify
@@ -21,7 +19,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
 import pymongo
 
-from fetch_citations_and_references import fetch_paper_data, send_query
+from fetch_citations_and_references import update_all_papers, send_query
 from fetch_papers import fetch_papers_main
 from logger import logger_config
 from twitter_daemon import main_twitter_fetcher
@@ -618,6 +616,7 @@ if __name__ == "__main__":
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
     scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=2)
+    scheduler.add_job(func=update_all_papers, trigger='cron', day_of_week='sat', hour=0, minute=0)
 
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())

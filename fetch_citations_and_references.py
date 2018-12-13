@@ -1,8 +1,17 @@
+import logging
 from datetime import datetime
 from time import sleep
 
 import pymongo
 import requests
+
+logger = logging.getLogger(__name__)
+
+client = pymongo.MongoClient()
+mdb = client.arxiv
+db_papers = mdb.papers
+sem_sch_papers = mdb.sem_sch_papers  # semantic scholar data
+sem_sch_authors = mdb.sem_sch_authors  # semantic scholar data
 
 
 def send_query(p, is_arxiv):
@@ -10,14 +19,13 @@ def send_query(p, is_arxiv):
     prefix = "arXiv:" if is_arxiv else ""
     response = requests.get(f'https://api.semanticscholar.org/v1/paper/{prefix}{p_id}').json()
     if 'error' in response:
-        print(f'Error - {p_id} - {response}')
+        logger.info(f'Error - {p_id} - {response}')
         return None
 
     authors = [{'id': a['authorId'], 'name': a['name']} for a in response['authors']]
     citations = [{'arxivId': c['arxivId'], 'paperId': c['paperId'], 'title': c['title']} for c in response['citations']]
     references = [{'arxivId': r['arxivId'], 'paperId': r['paperId'], 'title': r['title']} for r in
                   response['references']]
-    print(p_id)
     return {
         '_id': response['arxivId'], 'paperId': response['paperId'], 'year': response['year'],
         'time_updated': p.get('time_updated', None), 'time_published': p.get('time_published', None),
@@ -36,19 +44,14 @@ def fetch_paper_data(p, is_arxiv=True):
                 'found': 0}
     return res
 
-
-if __name__ == '__main__':
-    SEM_FIELD = 'semanticscholar'
-    min_days_to_update = 7 * 86400  # 7 days
-
-    client = pymongo.MongoClient()
-    mdb = client.arxiv
-    db_papers = mdb.papers
-    sem_sch_papers = mdb.sem_sch_papers # semantic scholar data
-    sem_sch_authors = mdb.sem_sch_authors # semantic scholar data
-
+def update_all_papers(age_days=5):
+    logger.info('Updating citations and references')
+    min_days_to_update = age_days * 86400
     papers = list(db_papers.find())
-    for p in papers:
+    logger.info(f'Fetching {len(papers)} documents')
+    for idx, p in enumerate(papers):
+        if idx % 500 == 0:
+            logger.info(f'Updating batch {idx}')
         cur_sem_sch = sem_sch_papers.find_one({'_id': p['_id']})
         if not cur_sem_sch or (datetime.utcnow() - cur_sem_sch['last_rec_update']).total_seconds() > min_days_to_update:
             res = fetch_paper_data(p)
@@ -57,8 +60,13 @@ if __name__ == '__main__':
                 sem_sch_authors.update({'_id': a['name']}, {}, True)
             sleep(0.2)
         else:
-            print('Paper is already in DB')
+            logger.debug('Paper is already in DB')
 
+    logger.info('Finished updating refs')
+
+
+if __name__ == '__main__':
+    update_all_papers()
 
 
 
