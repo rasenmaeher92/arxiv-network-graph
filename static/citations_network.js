@@ -112,7 +112,7 @@ var network_options = {
 
 
 function handle_references(data, nodes, edges) {
-    if ('references' in data) {
+    if (('references' in data) && (data.references)) {
         var references_edges = data.references.map(function(ref) {
             return {from: data.id, to: ref.arxivId || ref.paperId, arrows: 'to', color: {color: 'rgba(255, 39, 10, 0.3)'}, title: 'Reference'}
         });
@@ -125,7 +125,7 @@ function handle_references(data, nodes, edges) {
 }
 
 function handle_citations(data, nodes, edges) {
-    if ('citations' in data) {
+    if (('citations' in data) && (data.citations)) {
         var citations_edges = data.citations.map(function(ref) {
             return {from: ref.arxivId || ref.paperId, to: data.id, arrows: 'to', color: {color: 'rgba(10, 245, 0, 0.5)'}, title: 'Citation'}
         });
@@ -339,6 +339,11 @@ function fetch_data_and_draw(cur_s) {
 
 }
 
+function get_item_icon(item, with_name=true) {
+    var icon = (item.type === 'paper' ? 'newspaper' : 'user');
+    return `<i class="fas fa-${icon} item-icon"></i> ${with_name ? item.name : ''}`
+}
+
 var autocomplete_options = {
     url: function(phrase) {
         return "/autocomplete_2?q=" + phrase;
@@ -359,8 +364,7 @@ var autocomplete_options = {
 	template: {
 		type: "custom",
 		method: function(value, item) {
-		    var icon = (item.type === 'paper' ? 'newspaper' : 'user');
-			return `<i class="fas fa-${icon}"></i> ${item.name}`
+		    return get_item_icon(item);
 		}
 	}
 
@@ -416,3 +420,23 @@ $('.clear-input').on('click', function(e) {
 });
 
 $('#page_info').on('click', function(e) {$('#welcome').modal('show');});
+
+var popular_q_data;
+
+$.get('/popular_queries', function (data) {
+    var content = '';
+    var max_len = 50;
+    popular_q_data = data;
+    data.map(function(x, idx) {
+        content += `<div class='popular_q'>🔥 <a href='#' data-pos=${idx}>${x.name.substring(0,max_len)}${x.name.length > max_len ? '...' : ''}</a></div>`
+    });
+    $('#popular_queries_content').html(content);
+})
+
+$('body').on('click', '.popular_q a', function(e) {
+    e.preventDefault();
+    var cur_pos = parseInt($(this).data('pos'));
+    var cur_q = popular_q_data[cur_pos];
+    fetch_data_and_draw(cur_q);
+    $('#searchInput').val(cur_q.name);
+});

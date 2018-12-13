@@ -20,6 +20,8 @@ from flask import Flask, request, session, url_for, redirect, \
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug import check_password_hash, generate_password_hash
+from flask_caching import Cache
+
 import pymongo
 
 from fetch_citations_and_references import update_all_papers, send_query
@@ -40,6 +42,7 @@ else:
 app = Flask(__name__)
 app.config.from_object(__name__)
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["5000 per hour", "100 per minute"])
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 REQUESTER_COOKIE = 'network_requester'
 
@@ -542,14 +545,24 @@ def get_paper():
 
 
 @app.route('/popular_queries')
+@cache.cached(timeout=3600)
 def popular_queries():
     now = datetime.datetime.utcnow()
     max_age = now - datetime.timedelta(days=7)
     new_reqs = network_requests.find({'$and': [{'dt': {'$gt': max_age}}]}) # {'is_first': True},
-    new_reqs = set([(r['id'], r['type'], r['ip']) for r in new_reqs])
+    new_reqs = ([(r['id'], r['type'], r['ip']) for r in new_reqs])
     cnt = Counter([(r[0], r[1]) for r in new_reqs])
-    most_common = cnt.most_common(5)
-    return jsonify(most_common)
+    most_common = dict(cnt.most_common(10))
+
+    authors = [{'name': key[0], 'type': 'author', 'count': val} for key, val in most_common.items() if key[1] == 'author']
+
+    papers_ids = [p[0] for p in most_common.keys() if p[1] == 'paper']
+    papers = list(sem_sch_papers.find({'$or': [{'_id': {'$in': papers_ids}}, {'paperId': {'$in': papers_ids}}]}))
+    papers = [{'name': p['title'], 'type': 'paper', 'id': p['_id'], 'sem_id': p.get('paperId', '')} for p in papers]
+    for p in papers:
+        p['count'] = most_common.get((p['id'], 'paper'), -1)
+    all = sorted(papers + authors, key=lambda x: x['count'], reverse=True)
+    return jsonify(all)
 
 
 @app.route('/get_author')

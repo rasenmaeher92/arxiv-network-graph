@@ -20,3 +20,4 @@ pymongo
 APScheduler
 fa2l
 requests
+flask-caching
