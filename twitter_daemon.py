@@ -205,7 +205,7 @@ def process_tweets(tweets_raw_data):
 
     for r in tweets_raw_data:
         if hasattr(r, 'retweeted_status'):
-            logger.info('Tweet is a retweet')
+            # logger.info('Tweet is a retweet')
             r = r.retweeted_status
 
         if r.id_str in unique_tweet_ids: continue
