@@ -1,4 +1,3 @@
-import atexit
 import datetime
 import logging
 import os
@@ -14,7 +13,6 @@ from random import randrange, uniform
 
 from sqlite3 import dbapi2 as sqlite3
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, jsonify, make_response
 from flask_limiter import Limiter
@@ -24,12 +22,12 @@ from flask_caching import Cache
 
 import pymongo
 
-from fetch_citations_and_references import update_all_papers, send_query
-from fetch_papers import fetch_papers_main
-from logger import logger_config
-from twitter_daemon import main_twitter_fetcher
+from fetch_citations_and_references import send_query
 
-from utils import safe_pickle_dump, strip_version, isvalidid, Config
+from logger import logger_config
+
+
+from utils import strip_version, isvalidid, Config
 
 # various globals
 # -----------------------------------------------------------------------------
@@ -657,14 +655,6 @@ if __name__ == "__main__":
 
     TAGS = ['insightful!', 'thank you', 'agree', 'disagree', 'not constructive', 'troll', 'spam']
     ARXIV_CATEGORIES = json.load(open('relevant_arxiv_categories.json', 'r'))
-
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=30)
-    scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=2)
-    scheduler.add_job(func=update_all_papers, trigger='cron', day_of_week='sat', hour=0, minute=0)
-
-    scheduler.start()
-    atexit.register(lambda: scheduler.shutdown())
 
     # start
     if args.prod:

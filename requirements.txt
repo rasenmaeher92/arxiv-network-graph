@@ -17,7 +17,8 @@ flask_limiter
 tornado
 pymongo
 
-APScheduler
 fa2l
 requests
 flask-caching
+
+schedule
