@@ -97,7 +97,8 @@ def calc_papers_twitter_score(papers_to_update):
         for cur_p in t['pids']:
             score_per_paper[cur_p] += tot_score
             links_per_paper[cur_p].append({'tname': t['user_screen_name'], 'tid': t['_id'], 'rt': t['retweets'],
-                                           'name': t['user_name'], 'likes': t['likes'], 'replies': t.get('replies', 0)})
+                                           'name': t.get('user_name', t['user_screen_name']), 'likes': t['likes'],
+                                           'replies': t.get('replies', 0)})
     return score_per_paper, links_per_paper
 
 
