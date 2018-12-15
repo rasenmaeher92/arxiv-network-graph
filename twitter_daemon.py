@@ -7,6 +7,7 @@ import logging
 import os
 import re
 from collections import defaultdict
+from time import sleep
 
 import pytz
 import math
@@ -141,6 +142,7 @@ def fetch_twitter_users(usernames):
             #     break
         except Exception as e:
             logger.error(f'Failed to fetch tweets from {u}')
+        sleep(1)
     logger.info('Finished fetching tweets from users list')
     return tweets
 
