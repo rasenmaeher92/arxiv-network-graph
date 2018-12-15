@@ -58,7 +58,7 @@ def update_all_papers(age_days=5):
             sem_sch_papers.update({'_id': res['_id']}, {'$set': res}, True)
             for a in res['authors']:
                 sem_sch_authors.update({'_id': a['name']}, {}, True)
-            sleep(0.2)
+            sleep(1)
         else:
             logger.debug('Paper is already in DB')
 
