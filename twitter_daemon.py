@@ -2,18 +2,16 @@
 Periodically checks Twitter for tweets about arxiv papers we recognize
 and logs the tweets into mongodb database "arxiv", under "tweets" collection.
 """
+import json
 import logging
 import os
 import re
 from collections import defaultdict
 
 import pytz
-import time
 import math
-import pickle
 import datetime
 
-from dateutil import parser
 import tweepy
 import pymongo
 
@@ -25,19 +23,24 @@ sleep_time = 60*15 # in seconds, between twitter API calls. Default rate limit i
 max_tweet_records = 15
 
 logger = logging.getLogger(__name__)
-
+USERS_FILENAME = 'twitter_users.json'
 # convenience functions
 # -----------------------------------------------------------------------------
+
+
 def get_api_connector(consumer_key, consumer_secret):
   auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
   return tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
+
 def get_paper(pid):
   return list(db_papers.find({'_id': pid}).limit(1))
+
 
 def get_keys():
   lines = open('twitter.txt', 'r').read().splitlines()
   return lines
+
 
 def extract_arxiv_pids(r):
   pids = []
@@ -47,6 +50,7 @@ def extract_arxiv_pids(r):
       rawid = m.group(1)
       pids.append(rawid)
   return pids
+
 
 def get_latest_or_loop(q):
     results = None
@@ -60,14 +64,8 @@ def get_latest_or_loop(q):
     logger.info('Fetched results')
     return results
 
-epochd = datetime.datetime(1970,1,1,tzinfo=pytz.utc) # time of epoch
 
-def tprepro(tweet_text):
-  # take tweet, return set of words
-  t = tweet_text.lower()
-  t = re.sub(r'[^\w\s]','',t) # remove punctuation
-  ws = set([w for w in t.split() if not w.startswith('#')])
-  return ws
+epochd = datetime.datetime(1970,1,1,tzinfo=pytz.utc) # time of epoch
 
 
 def get_age_decay(age):
@@ -78,8 +76,8 @@ def get_age_decay(age):
   """
   SCALE = 7  # The distance from origin at which the computed factor will equal decay parameter
   DECAY = 0.5  # Defines the score at scale compared to zero (better to update only the scale and keep it fixed
-  OFFSET = 1  # the decay function will only compute the decay function for post with a distance greater
-  TIME_FACTOR = 0.8  # Reduce the decay over time by taking the TIME FACTOR power of the time value
+  OFFSET = 2  # the decay function will only compute the decay function for post with a distance greater
+  TIME_FACTOR = 0.75  # Reduce the decay over time by taking the TIME FACTOR power of the time value
 
   if age <= OFFSET:
     return 1
@@ -89,19 +87,19 @@ def get_age_decay(age):
 
 def calc_papers_twitter_score(papers_to_update):
     papers_to_update = list(set(papers_to_update))
-    papers_tweets = list(tweets.find({'pids': {'$in': papers_to_update}}))
+    papers_tweets = list(db_tweets.find({'pids': {'$in': papers_to_update}}))
     score_per_paper = defaultdict(int)
     links_per_paper = defaultdict(list)
     for t in papers_tweets:
         followers_score = math.log10(t['user_followers_count'] + 1)
-        likes_score = math.log10(t['likes'] + 1)
-        retweets_score = math.log10(t['retweets'] + 1)
-        tot_score = 0.5 * followers_score + 2 * likes_score + 4 * retweets_score
+        tot_score = (t['likes'] + 2 * t['retweets']) * (t.get('replies', 0) * 4 + 0.5) / followers_score
 
         for cur_p in t['pids']:
             score_per_paper[cur_p] += tot_score
-            links_per_paper[cur_p].append({'tname': t['user_screen_name'], 'tid': t['_id'], 'rt': t['retweets'], 'likes': t['likes']})
+            links_per_paper[cur_p].append({'tname': t['user_screen_name'], 'tid': t['_id'], 'rt': t['retweets'],
+                                           'name': t['user_name'], 'likes': t['likes'], 'replies': t.get('replies', 0)})
     return score_per_paper, links_per_paper
+
 
 def summarize_tweets(papers_to_update):
     score_per_paper, links_per_paper = calc_papers_twitter_score(papers_to_update)
@@ -132,19 +130,80 @@ def get_banned():
     return banned
 
 
+def fetch_twitter_users(usernames):
+    logger.info('Fetching tweets from users list')
+    tweets = []
+    for idx, u in enumerate(usernames):
+        try:
+            tweets += api.user_timeline(screen_name=u['screen_name'], count=100)
+            # if idx > 3:
+            #     break
+        except Exception as e:
+            logger.error(f'Failed to fetch tweets from {u}')
+    logger.info('Finished fetching tweets from users list')
+    return tweets
+
 
 def fetch_tweets():
-    banned = get_banned()
-    dnow_utc = datetime.datetime.now(datetime.timezone.utc)
-    # fetch the latest mentioning arxiv.org
     logger.info('Fetching tweets')
+    # fetch the latest mentioning arxiv.org
     results = get_latest_or_loop('arxiv.org')
-    to_insert = []
 
+    if os.path.isfile(USERS_FILENAME):
+        usernames = json.load(open(USERS_FILENAME, 'r'))
+        results += fetch_twitter_users(usernames)
+    else:
+        logger.warning('Users file is missing')
+    return results
+
+
+def tweet_to_dict(r, arxiv_pids, dnow_utc, num_replies):
+    d = r.created_at.replace(tzinfo=pytz.UTC)  # datetime instance
+    tweet = {}
+    tweet['_id'] = r.id_str
+    tweet['pids'] = arxiv_pids  # arxiv paper ids mentioned in this tweet
+    tweet['inserted_at_date'] = dnow_utc
+    tweet['created_at_date'] = d
+    tweet['created_at_time'] = (d - epochd).total_seconds()  # seconds since epoch
+    tweet['lang'] = r.lang
+    tweet['text'] = r.text
+    tweet['retweets'] = r.retweet_count
+    tweet['likes'] = r.favorite_count
+    tweet['replies'] = num_replies
+    tweet['user_screen_name'] = r.author.screen_name
+    tweet['user_name'] = r.author.name
+    tweet['user_followers_count'] = r.author.followers_count
+    tweet['user_following_count'] = r.author.friends_count
+    return tweet
+
+
+def is_tweet_new(tweet_id_q):
+    if db_tweets.find_one(tweet_id_q):
+        is_new = False
+    else:
+        is_new = True
+    return is_new
+
+def find_num_replies(t):
+    try:
+        replies = api.search(q=f'to:{t.author.screen_name}', since_id=t.id_str, count=100)
+        filter_func = lambda x: x.in_reply_to_status_id_str == t.id_str and x.author.screen_name != t.author.screen_name
+        rel_replies = list(filter(filter_func, replies))
+        return len(rel_replies)
+    except Exception as e:
+        logger.error(f'Failed to fetch replies for tweet - {t.id_str} - {e}')
+        return 0
+
+
+def process_tweets(tweets_raw_data):
+    logger.info('Process tweets')
+    dnow_utc = datetime.datetime.now(datetime.timezone.utc)
+    banned = get_banned()
+    to_insert = []
     papers_to_update = []
     unique_tweet_ids = set()
 
-    for r in results:
+    for r in tweets_raw_data:
         if hasattr(r, 'retweeted_status'):
             logger.info('Tweet is a retweet')
             r = r.retweeted_status
@@ -153,49 +212,32 @@ def fetch_tweets():
 
         arxiv_pids = extract_arxiv_pids(r)
         # arxiv_pids = list(db_papers.find({'_id': {'$in': arxiv_pids}}))  # filter to those that are in our paper db
-        if not arxiv_pids: continue  # nothing we know about here, lets move on
-        tweet_id_q = {'_id': r.id_str}
-        if tweets.find_one(tweet_id_q):
-            is_new = False
-        else:
-            is_new = True
-
-        if r.user.screen_name in banned: continue  # banned user, very likely a bot
+        if not arxiv_pids : continue
+        if r.author.screen_name in banned: continue
 
         papers_to_update += arxiv_pids
 
-        # create the tweet. intentionally making it flat here without user nesting
-        d = r.created_at.replace(tzinfo=pytz.UTC)  # datetime instance
-        tweet = {}
-        tweet['_id'] = r.id_str
-        tweet['pids'] = arxiv_pids  # arxiv paper ids mentioned in this tweet
-        tweet['inserted_at_date'] = dnow_utc
-        tweet['created_at_date'] = d
-        tweet['created_at_time'] = (d - epochd).total_seconds()  # seconds since epoch
-        tweet['lang'] = r.lang
-        tweet['text'] = r.text
-        tweet['retweets'] = r.retweet_count
-        tweet['likes'] = r.favorite_count
-        tweet['user_screen_name'] = r.user.screen_name
-        tweet['user_image_url'] = r.user.profile_image_url
-        tweet['user_followers_count'] = r.user.followers_count
-        tweet['user_following_count'] = r.user.friends_count
-        if is_new:
+        num_replies = find_num_replies(r)
+        tweet = tweet_to_dict(r, arxiv_pids, dnow_utc, num_replies)
+
+        tweet_id_q = {'_id': r.id_str}
+        if is_tweet_new(tweet_id_q):
             to_insert.append(tweet)
         else:
-            tweets.update(tweet_id_q, {'$set': tweet}, True)
+            db_tweets.update(tweet_id_q, {'$set': tweet}, True)
 
         unique_tweet_ids.add(r.id_str)
         logger.info(f'Found tweet for {arxiv_pids} with {tweet["likes"]} likes')
 
     if to_insert:
-        tweets.insert_many(to_insert)
-    logger.info('processed %d/%d new tweets. Currently maintaining total %d' % (len(to_insert), len(results), tweets.count()))
+        db_tweets.insert_many(to_insert)
+    logger.info('processed %d/%d new tweets. Currently maintaining total %d' % (len(to_insert), len(tweets_raw_data), db_tweets.count()))
     return papers_to_update
 
 
 def main_twitter_fetcher():
-    papers_to_update = fetch_tweets()
+    tweets = fetch_tweets()
+    papers_to_update = process_tweets(tweets)
     summarize_tweets(papers_to_update)
 
 
@@ -208,7 +250,7 @@ api = get_api_connector(keys[0], keys[1])
 # connect to mongodb instance
 client = pymongo.MongoClient()
 mdb = client.arxiv
-tweets = mdb.tweets # the "tweets" collection in "arxiv" database
+db_tweets = mdb.tweets # the "tweets" collection in "arxiv" database
 db_papers = mdb.papers
 
 # main loop

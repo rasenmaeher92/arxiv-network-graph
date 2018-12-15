@@ -645,7 +645,7 @@ if __name__ == "__main__":
     ARXIV_CATEGORIES = json.load(open('relevant_arxiv_categories.json', 'r'))
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=20)
+    scheduler.add_job(func=main_twitter_fetcher, trigger="interval", minutes=30)
     scheduler.add_job(func=fetch_papers_main, trigger="interval", hours=2)
     scheduler.add_job(func=update_all_papers, trigger='cron', day_of_week='sat', hour=0, minute=0)
 

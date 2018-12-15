@@ -188,17 +188,17 @@ function addPapers(num, dynamic) {
         div.append('div').classed('inlibsof', true).html('In libraries of: ' + usrtxt);
       }
     }
-    if (p.twtr_links !== undefined) {
+    if ((p.twtr_links !== undefined) && (p.twtr_links.length > 0)) {
         var tweets_div_id = `tweets-${ix}`;
-        div.append('div').html('<button>Show tweets</button>').attr('target', '#' + tweets_div_id).on('click', function() {
-            $($(this).attr('target')).show();
+        var toggle_button = div.append('div').append('button');
+        toggle_button.text('Show tweets').attr('target', '#' + tweets_div_id).on('click', function() {
+            $($(this).attr('target')).toggle();
         });
         var tdiv = div.append('div').classed('twdiv', true).attr('id', tweets_div_id);
         p.twtr_links.map( function (t, idx) {
             var cur_d = tdiv.append('div');
-            cur_d.append('a').attr('href', 'https://twitter.com/' + t.tname + '/status/' + t.tid)
-            .attr('target', '_blank').text(`${t.tname}`);
-            cur_d.append('span').text(` - ♡${t.likes}  ♺${t.rt}`);
+            cur_d.append('span').classed('tweet-meta', true).html(`<i class="far fa-heart"></i> ${t.likes} &nbsp; <i class="fas fa-retweet"></i> ${t.rt} &nbsp; <i class="fas fa-reply"></i> ${t.replies || 0} &nbsp; &nbsp; `);
+            cur_d.append('a').attr('href', 'https://twitter.com/' + t.tname + '/status/' + t.tid).attr('target', '_blank').text(`${t.name || t.tname}`);
         })
     }
 
