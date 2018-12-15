@@ -579,13 +579,27 @@ def autocomplete_2():
     if len(q) <= 1:
         return jsonify([])
 
-    authors = list(sem_sch_authors.find({'_id': {'$regex': re.compile(f'.*{q}.*', re.IGNORECASE)}}).limit(7))
+    MAX_ITEMS = 10
+    author_q = f'.*{q.replace(" ", ".*")}.*'
+    authors = list(sem_sch_authors.find({'_id': {'$regex': re.compile(author_q, re.IGNORECASE)}}).limit(MAX_ITEMS))
     authors = [{'name': a['_id'], 'type': 'author'} for a in authors]
 
-    papers = list(sem_sch_papers.find({'$or': [{'_id': q}, {'$text': {'$search': q}}]}).limit(7))
+    papers = list(sem_sch_papers.find({'$or': [{'_id': q}, {'$text': {'$search': q}}]}).limit(MAX_ITEMS))
     papers = [{'name': p['title'], 'type': 'paper', 'id': p['_id'], 'sem_id': p.get('paperId', '')} for p in papers]
 
-    return jsonify(authors + papers)
+    papers_len = len(papers)
+    authors_len = len(authors)
+    if papers_len + authors_len > MAX_ITEMS:
+        if papers_len > int(MAX_ITEMS/2) and authors_len > int(MAX_ITEMS/2):
+            authors = authors[:int(MAX_ITEMS/2)]
+            papers = papers[:int(MAX_ITEMS/2)]
+        else:
+            if authors_len > papers_len:
+                authors = authors[:(MAX_ITEMS - papers_len)]
+            else:
+                papers = papers[:(MAX_ITEMS - authors)]
+
+    return jsonify(papers + authors)
 
 
 @app.route('/autocomplete')
