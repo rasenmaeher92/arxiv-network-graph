@@ -5,7 +5,7 @@ from time import sleep
 import pymongo
 import requests
 
-logger = logging.getLogger(__name__)
+from logger import logger_config
 
 client = pymongo.MongoClient()
 mdb = client.arxiv
@@ -66,6 +66,8 @@ def update_all_papers(age_days=5):
 
 
 if __name__ == '__main__':
+    logger_config(info_filename='citations_task.log')
+    logger = logging.getLogger(__name__)
     update_all_papers()
 
 
