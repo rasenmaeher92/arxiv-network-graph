@@ -1,22 +1,34 @@
 
 # MLG - Visual Machine Learning arxiv Graph and Textual explorer
 
-MLG is a visual representation of ML researchers and papers from arXiv from the last year (for now). 
-Each node in the graph is an authors and the edges represent co-authorship of papers.
+MLG (Machine Learning Graph) is a visual representation of ML researchers and papers, and the connections between them.
+Each node in the graph (/citations_network) is an author or a paper, and an edge can represent a citation, a reference or a authorship. 
+
+Note: There is an old version of the graph (/network) in which edges represent co-authorship of papers.
+
+Live demo is available at [Lyrn.ai](https://arxiv.lyrn.ai/citations_network). 
 
 MLG allows you to:
 1. Search for papers or authors.
-2. Filter by topics (NLP, Vision, etc).
-3. Focus on specific author and explore his/her neighbors gradually.
+2. Navigate between related papers and authors. 
+3. Click on a node to view its list of papers and double click to expand its connections.
+4. Re-organize the network after expanding. 
+
+The backend is based on arxiv-sanity but with a lot of modifications:
+* The papers data is collected from arxiv.org and semanticscholar.org. Everything is stored on MongoDB.
+* Rebuilt the Twitter daemon - it now collects tweets from a list of prominent ML accounts, in addition for searching arxiv.org links on Twitter. 
+   
+The project includes three parts:
+
+1. / - arXiv text explorer
+2. /citations_network - The new viual   
+3. /network - arXiv visual graph explorer
+  
+![NewVersion](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+
+Example of the old version: 
 
 ![user interface](https://raw.github.com/ranihorev/arxiv-network-graph/master/arxiv_graph.jpg)
-
-The backend is based on arxiv-sanity but with a lot of modifications - all arXiv data is stored on MongoDB, rebuilt Twitter deamon, etc.
-
-There are two large parts of the code:
-
-1. / - arXiv text explorer 
-2. /network - arXiv visual graph explorer 
 
 ### Dependencies  
 
@@ -26,17 +38,17 @@ $ source env/bin/activate       # optional: use virtualenv
 $ pip install -r requirements.txt
 ```
 
-There is still some legacy code from arxiv-sanity, therefore some of the
+There is still some legacy code from arxiv-sanity that require some of the packages in the requirement. 
 
 ### Processing pipeline
 
 1. Install and start MongoDB
-2. Optional - Run `fetch_papers.py` to collect all paper from arXiv 
-3. Create `twitter.txt` with your Twitter API credentials (values of consumer key and secret, in separate lines).
-3. Run the flask server with `serve.py`. Visit localhost:5000 and enjoy sane viewing of papers!
-4. Background tasks will to fetch new papers and search for twitter mentions
+2. Optional - Run `fetch_papers.py` to collect all paper from arXiv. Run `fetch_citations_and_references.py` to collect data from semanticScholar.org.  
+3. Create `twitter.txt` with your Twitter API credentials (values of consumer key and secret, in separate lines). You can also add accounts to the `twitter_users.json` file. 
+3. Run `run_background_tasks.py` to start background tasks scheduler. 
+4. Run the flask server with `serve.py`.
 
-### Generating the network graph
+### Old version - Generating the network graph
 
 After fetching papers from arXiv you can build the network graph by running the notebook `graph_generator.ipynb`.
 It will overwrite the `static/network_data.json`. 
