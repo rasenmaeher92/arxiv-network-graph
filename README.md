@@ -24,7 +24,7 @@ The project includes three parts:
 2. /citations_network - The new viual   
 3. /network - arXiv visual graph explorer
   
-![NewVersion](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
+![NewVersion](https://media.giphy.com/media/48OslMteQHE8krVVMu/giphy.gif)
 
 Example of the old version: 
 
