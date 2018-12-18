@@ -4,7 +4,7 @@
 MLG (Machine Learning Graph) is a visual representation of ML researchers and papers, and the connections between them.
 Each node in the graph (/citations_network) is an author or a paper, and an edge can represent a citation, a reference or a authorship. 
 
-Note: There is an old version of the graph (/network) in which edges represent co-authorship of papers.
+Note: There is an old version of the graph (/network) in which edges represent co-authorship of papers, based solely on arXiv.org.
 
 Live demo is available at [Lyrn.ai](https://arxiv.lyrn.ai/citations_network). 
 
@@ -20,9 +20,9 @@ The backend is based on arxiv-sanity but with a lot of modifications:
    
 The project includes three parts:
 
-1. / - arXiv text explorer
-2. /citations_network - The new viual   
-3. /network - arXiv visual graph explorer
+1. / - arXiv text explorer.
+2. /citations_network - The new visual network graph explorer. 
+3. /network - The old arXiv visual graph explorer.
   
 ![NewVersion](https://media.giphy.com/media/48OslMteQHE8krVVMu/giphy.gif)
 
