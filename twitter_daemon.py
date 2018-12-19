@@ -60,7 +60,7 @@ def get_latest_or_loop(q):
     results = None
     while results is None:
         try:
-            results = api.search(q=q, count=100, result_type="mixed")
+            results = api.search(q=q, count=100, result_type="mixed", tweet_mode='extended')
         except Exception as e:
             logger.info('there was some problem (waiting some time and trying again):')
             logger.error(e)
@@ -140,7 +140,7 @@ def fetch_twitter_users(usernames):
     tweets = []
     for idx, u in enumerate(usernames):
         try:
-            tweets += api.user_timeline(screen_name=u['screen_name'], count=100)
+            tweets += api.user_timeline(screen_name=u['screen_name'], count=100, tweet_mode='extended')
             # if idx > 3:
             #     break
         except Exception as e:
