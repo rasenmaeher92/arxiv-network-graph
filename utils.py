@@ -99,3 +99,20 @@ def strip_version(idstr):
 # "1511.08198v1" is an example of a valid arxiv id that we accept
 def isvalidid(pid):
   return re.match('^\d+\.\d+(v\d+)?$', pid)
+
+
+def catch_exceptions(logger):
+    def decorator(func):
+
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except:
+                # log the exception
+                err = "There was an exception in  "
+                err += func.__name__
+                logger.exception(err)
+
+        return wrapper
+
+    return decorator

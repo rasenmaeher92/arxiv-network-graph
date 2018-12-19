@@ -16,14 +16,17 @@ import datetime
 import tweepy
 import pymongo
 
-from utils import Config
+from logger import logger_config
+from utils import Config, catch_exceptions
 
 # settings
 # -----------------------------------------------------------------------------
 sleep_time = 60*15 # in seconds, between twitter API calls. Default rate limit is 180 per 15 minutes
 max_tweet_records = 15
 
+logger_config(info_filename='twitter_daemon.log')
 logger = logging.getLogger(__name__)
+
 USERS_FILENAME = 'twitter_users.json'
 # convenience functions
 # -----------------------------------------------------------------------------
@@ -238,6 +241,7 @@ def process_tweets(tweets_raw_data):
     return papers_to_update
 
 
+@catch_exceptions(logger=logger)
 def main_twitter_fetcher():
     tweets = fetch_tweets()
     papers_to_update = process_tweets(tweets)

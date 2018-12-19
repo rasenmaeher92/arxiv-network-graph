@@ -14,7 +14,9 @@ import urllib.request
 import feedparser
 
 from logger import logger_config
+from utils import catch_exceptions
 
+logger_config(info_filename='arxiv_fetcher.log')
 logger = logging.getLogger(__name__)
 BASE_URL = 'http://export.arxiv.org/api/query?' # base api query url
 
@@ -90,6 +92,7 @@ def fetch_entries(query):
 DEF_QUERY = 'cat:cs.CV+OR+cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+cat:stat.ML'
 
 
+@catch_exceptions(logger=logger)
 def fetch_papers_main(start_index=0, max_index=3000, results_per_iteration=200, wait_time=5, search_query=DEF_QUERY, break_on_no_added=1):
     # main loop where we fetch the new results
     logger.info('Updating paper DB')
