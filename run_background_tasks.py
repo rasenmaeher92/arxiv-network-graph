@@ -19,5 +19,8 @@ if __name__ == '__main__':
     schedule.every().saturday.at("00:10").do(update_all_papers)
 
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
+        except Exception as e:
+            logger.error(f'Major Error - {e}')
         time.sleep(1)
