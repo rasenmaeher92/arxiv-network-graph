@@ -172,7 +172,7 @@ def tweet_to_dict(r, arxiv_pids, dnow_utc, num_replies):
     tweet['created_at_date'] = d
     tweet['created_at_time'] = (d - epochd).total_seconds()  # seconds since epoch
     tweet['lang'] = r.lang
-    tweet['text'] = r.text
+    tweet['text'] = r.full_text
     tweet['retweets'] = r.retweet_count
     tweet['likes'] = r.favorite_count
     tweet['replies'] = num_replies
