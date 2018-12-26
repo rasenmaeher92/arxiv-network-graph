@@ -96,7 +96,8 @@ def teardown_request(exception):
 # -----------------------------------------------------------------------------
 
 def papers_search(qraw):
-    return list(db_papers.find({'$text': {'$search': qraw}}).limit(50))
+    q = db_papers.find({'$text': {'$search': qraw}}, {'score': {'$meta': "textScore"}})
+    return list(q.sort([('score', {'$meta': 'textScore'})]).limit(50))
 
 
 def papers_similar(pid):
