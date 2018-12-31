@@ -447,3 +447,19 @@ ul.flashes li {
 .tweet-meta {
     font-size: 13px;
 }
+
+.navbar {
+    background-color:#002e5b;
+    color: white;
+}
+
+.login_input {
+    display: inline;
+}
+
+@media only screen and (max-width: 767px) {
+    .login_input {
+        display: block;
+        padding-top: 8px;
+    }
+}
