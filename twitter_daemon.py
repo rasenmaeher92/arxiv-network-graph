@@ -95,7 +95,7 @@ def calc_papers_twitter_score(papers_to_update):
     score_per_paper = defaultdict(int)
     links_per_paper = defaultdict(list)
     for t in papers_tweets:
-        followers_score = math.log10(t['user_followers_count'] + 1)
+        followers_score = max(math.log10(t['user_followers_count'] + 1), 1)
         tot_score = (t['likes'] + 2 * t['retweets']) * (t.get('replies', 0) * 4 + 0.5) / followers_score
 
         for cur_p in t['pids']:
