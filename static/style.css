@@ -86,8 +86,15 @@ h1 {
 	background-color: white;
 }
 
+.maindiv_secondary {
+	padding: 15px;
+	margin-top: 30px;
+	border: solid 1px #D6D3C5;
+	background-color: white;
+}
+
 .apaper {
-	margin-top: 25px;
+	margin-top: 5px;
 	/* min-height: 300px; */
 }
 .animg {
@@ -450,7 +457,11 @@ ul.flashes li {
 
 .navbar {
     background-color:#002e5b;
-    color: white;
+    color: #fff;
+}
+
+.navbar a {
+    color: #fff;
 }
 
 .login_input {

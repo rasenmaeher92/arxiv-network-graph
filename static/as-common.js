@@ -227,3 +227,115 @@ function timeConverter(UNIX_timestamp){
   var time = date + ' ' + month + ' ' + year + ', ' + hour + ':' + min + ':' + sec ;
   return time;
 }
+
+
+// when page loads...
+$(document).ready(function(){
+
+	urlq = QueryString.q;
+
+  // display message, if any
+  if(msg !== '') { d3.select("#rtable").append('div').classed('msg', true).html(msg); }
+
+  // add papers to #rtable
+	var done = addPapers(10, false);
+  if(done) { $("#loadmorebtn").hide(); }
+
+  // set up inifinite scrolling for adding more papers
+  $(window).on('scroll', function(){
+    var scrollTop = $(document).scrollTop();
+    var windowHeight = $(window).height();
+    var bodyHeight = $(document).height() - windowHeight;
+    var scrollPercentage = (scrollTop / bodyHeight);
+    if(scrollPercentage > 0.9) {
+      var done = addPapers(5, true);
+      if(done) { $("#loadmorebtn").hide(); }
+    }
+  });
+
+  // just in case scrolling is broken somehow, provide a button handler explicit
+  $("#loadmorebtn").on('click', function(){
+    var done = addPapers(5, true);
+    if(done) { $("#loadmorebtn").hide(); }
+  });
+
+  if(papers.length === 0) { $("#loadmorebtn").hide(); }
+
+	if(!(typeof urlq == 'undefined')) {
+		d3.select("#qfield").attr('value', urlq.replace(/\+/g, " "));
+	}
+
+  var vf = QueryString.vfilter; if(typeof vf === 'undefined') { vf = 'published'; }
+  var tf = QueryString.timefilter; if(typeof tf === 'undefined') { tf = 'week'; }
+  var link_endpoint = '/';
+  if(render_format === 'recent') { link_endpoint = ''; }
+  if(render_format === 'top') { link_endpoint = 'top'; }
+  if(render_format === 'recommend') { link_endpoint = 'recommend'; }
+  if(render_format === 'friends') { link_endpoint = 'friends'; }
+  if(render_format === 'toptwtr') { link_endpoint = 'toptwtr'; }
+  if(render_format === 'discussions') { link_endpoint = 'discussions'; }
+
+  var time_ranges = ['day', '3days', 'week', 'month', 'year', 'alltime'];
+  var time_txt = {'day':'Last day', '3days': 'Last 3 days', 'week': 'Last week', 'month': 'Last month', 'year': 'Last year', 'alltime': 'All time'}
+  var time_range = tf;
+
+  // set up time filtering options
+  if(render_format === 'recommend' || render_format === 'top' || render_format === 'recent' || render_format === 'friends') {
+    // insert version filtering options for these views
+    var elt = d3.select('#recommend-time-choice');
+    var vflink = vf === 'published' ? 'last_updated' : 'published'; // toggle only showing v1 or not
+    if(render_format === 'recent') {
+      var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'&vfilter='+vflink); // leave out timefilter from this page
+    } else {
+      var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'timefilter='+time_range+'&vfilter='+vflink);
+    }
+    var delt = aelt.append('div').classed('vchoice', true).html('Sort by last update');
+    if(vf === 'last_updated') { delt.classed('vchoice-selected', true); }
+  }
+
+  // time choices for recommend/top
+  if(render_format === 'recommend' || render_format === 'top' || render_format === 'friends') {
+    // insert time filtering options for these two views
+    var elt = d3.select('#recommend-time-choice');
+    elt.append('div').classed('fdivider', true).html('|');
+    for(var i=0;i<time_ranges.length;i++) {
+      var time_range = time_ranges[i];
+      var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'timefilter='+time_range+'&vfilter='+vf);
+      var delt = aelt.append('div').classed('timechoice', true).html(time_txt[time_range]);
+      if(tf == time_range) { delt.classed('timechoice-selected', true); } // also render as chosen
+    }
+  }
+
+  // time choices for top tweets
+  if(render_format === 'toptwtr') {
+    var tf = QueryString.timefilter; if(typeof tf === 'undefined') { tf = 'week'; } // default here is day
+    var time_ranges = ['day', 'week', 'month'];
+    var elt = d3.select('#recommend-time-choice');
+    for(var i=0;i<time_ranges.length;i++) {
+      var time_range = time_ranges[i];
+      var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'timefilter='+time_range);
+      var delt = aelt.append('div').classed('timechoice', true).html(time_txt[time_range]);
+      if(tf == time_range) { delt.classed('timechoice-selected', true); } // also render as chosen
+    }
+  }
+
+  var xb = $("#xbanner");
+  if(xb.length !== 0) {
+    xb.click(function(){ $("#banner").slideUp('fast'); })
+  }
+
+  // in top tab: color current choice
+  if( render_format === 'recent') { d3.select('#tabrecent').classed('tab-selected', true); }
+  if( render_format === 'top') { d3.select('#tabtop').classed('tab-selected', true); }
+  if( render_format === 'toptwtr') { d3.select('#tabtwtr').classed('tab-selected', true); }
+  if( render_format === 'friends') { d3.select('#tabfriends').classed('tab-selected', true); }
+  if( render_format === 'discussions') { d3.select('#tabdiscussions').classed('tab-selected', true); }
+  if( render_format === 'recommend') { d3.select('#tabrec').classed('tab-selected', true); }
+  if( render_format === 'library') { d3.select('#tablib').classed('tab-selected', true); }
+
+  $("#goaway").on('click', function(){
+    $("#prompt").slideUp('fast');
+    $.post("/goaway", {}).done(function(data){ });
+  });
+
+});

@@ -249,7 +249,7 @@ def discuss():
   return render_template('discuss.html', **ctx)
 
 
-def get_paper(pid):
+def _get_paper_data(pid):
     return list(db_papers.find({'_id': pid}).limit(1))
 
 
@@ -267,7 +267,7 @@ def comment():
   # process the raw pid and validate it, etc
   try:
     pid = request.form['pid']
-    cur_p = get_paper(pid)
+    cur_p = _get_paper_data(pid)
     if not cur_p: raise Exception("invalid pid")
     version = cur_p[0]['_version'] # most recent version of this paper
   except Exception as e:
@@ -300,7 +300,7 @@ def discussions():
   have = set()
   for e in comms_cursor:
     pid = e['pid']
-    cur_p = get_paper(pid)
+    cur_p = _get_paper_data(pid)
     if cur_p and not pid in have:
       have.add(pid)
       papers.append(cur_p)
