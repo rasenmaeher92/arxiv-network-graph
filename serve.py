@@ -400,14 +400,12 @@ def review():
     # check this user already has this paper in library
     record = query_db('''select * from library where
           user_id = ? and paper_id = ?''', [uid, pid], one=True)
-    print(record)
 
     ret = 'NO'
     if record:
         # record exists, erase it.
         g.db.execute('''delete from library where user_id = ? and paper_id = ?''', [uid, pid])
         g.db.commit()
-        #print('removed %s for %s' % (pid, uid))
         ret = 'OFF'
     else:
         # record does not exist, add it.
@@ -415,7 +413,6 @@ def review():
         g.db.execute('''insert into library (paper_id, user_id, update_time) values (?, ?, ?)''',
                      [rawpid, uid, int(time.time())])
         g.db.commit()
-        #print('added %s for %s' % (pid, uid))
         ret = 'ON'
 
     return ret
