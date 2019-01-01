@@ -354,12 +354,14 @@ def search():
 def toptwtr():
     """ return top papers """
     ttstr = request.args.get('timefilter', 'week') # default is day
+    age_decay = int(request.args.get('age_decay', '0')) # with age decay
+    sort_field = 'twtr_score_dec' if age_decay else 'twtr_score'
     legend = {'day': 1, '3days': 3, 'week': 7, 'month': 30, 'year': 365, 'alltime': 10000}
     days = legend.get(ttstr)
     dnow_utc = datetime.datetime.now()
     dminus = dnow_utc - datetime.timedelta(days=int(days))
     papers, tweets = [], []
-    papers = list(db_papers.find({'time_published': {'$gt': dminus}}).sort('twtr_score_dec', pymongo.DESCENDING))
+    papers = list(db_papers.find({'time_published': {'$gt': dminus}}).sort(sort_field, pymongo.DESCENDING))
 
     ctx = default_context(papers, render_format='toptwtr', tweets=tweets,
                           msg=f'Top papers mentioned on Twitter over last {days} days')

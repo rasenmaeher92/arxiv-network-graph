@@ -26,6 +26,17 @@ var QueryString = function () {
 
 function jq( myid ) { return myid.replace( /(:|\.|\[|\]|,)/g, "\\$1" ); } // for dealing with ids that have . in them
 
+function updateQueryStringParameter(uri, key, value) {
+  var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+  var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+  if (uri.match(re)) {
+    return uri.replace(re, '$1' + key + "=" + value + '$2');
+  }
+  else {
+    return uri + separator + key + "=" + value;
+  }
+}
+
 function build_ocoins_str(p) {
   var ocoins_info = {
     "ctx_ver": "Z39.88-2004",
@@ -84,6 +95,7 @@ function addPapers(num, dynamic) {
   if(papers.length === 0) { return true; } // nothing to display, and we're done
 
   var root = d3.select("#rtable");
+  var twtr_score_field = QueryString.age_decay === '1' ? 'twtr_score_dec' : 'twtr_score';
 
   var base_ix = pointer_ix;
   for(var i=0;i<num;i++) {
@@ -133,7 +145,7 @@ function addPapers(num, dynamic) {
     
     // rank by tfidf similarity
     ldiv.append('br');
-    var score = p.twtr_score_dec !== undefined ? p.twtr_score_dec : 0;
+    var score = p[twtr_score_field] || 0;
     ldiv.append('span').html('Score: ' + score.toFixed(1));
 //    var similar_span = ldiv.append('span').classed('sim', true).attr('id', 'sim'+p.pid).html('show similar');
 //    similar_span.on('click', function(pid){ // attach a click handler to redirect for similarity search
@@ -317,6 +329,9 @@ $(document).ready(function(){
       var delt = aelt.append('div').classed('timechoice', true).html(time_txt[time_range]);
       if(tf == time_range) { delt.classed('timechoice-selected', true); } // also render as chosen
     }
+    var decay_button = elt.append('div').classed('form-check', true);
+    decay_button.html('<input type="checkbox" class="form-check-input" id="age_decay"><label class="form-check-label">Age Decay</label>')
+    document.getElementById('age_decay').checked = (QueryString.age_decay === '1' ? true : false);
   }
 
   var xb = $("#xbanner");
@@ -336,6 +351,10 @@ $(document).ready(function(){
   $("#goaway").on('click', function(){
     $("#prompt").slideUp('fast');
     $.post("/goaway", {}).done(function(data){ });
+  });
+
+  $(document).on('change', '#age_decay', function(e) {
+    window.location.href = updateQueryStringParameter(window.location.href, 'age_decay', this.checked ? '1' : '0');
   });
 
 });
