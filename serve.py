@@ -391,7 +391,7 @@ def review():
     if not isvalidid(idvv):
         return 'NO' # fail, malformed id. weird.
     pid = strip_version(idvv)
-    cur_p = get_paper(pid)
+    cur_p = _get_paper_data(pid)
     if not cur_p:
         return 'NO' # we don't know this paper. wat
 
