@@ -591,7 +591,7 @@ def autocomplete_2():
             if authors_len > papers_len:
                 authors = authors[:(MAX_ITEMS - papers_len)]
             else:
-                papers = papers[:(MAX_ITEMS - authors)]
+                papers = papers[:(MAX_ITEMS - authors_len)]
 
     return jsonify(papers + authors)
 
