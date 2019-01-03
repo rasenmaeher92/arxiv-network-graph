@@ -37,10 +37,6 @@ def get_api_connector(consumer_key, consumer_secret):
   return tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 
-def get_paper(pid):
-  return list(db_papers.find({'_id': pid}).limit(1))
-
-
 def get_keys():
   lines = open('twitter.txt', 'r').read().splitlines()
   return lines
@@ -110,8 +106,9 @@ def summarize_tweets(papers_to_update):
     score_per_paper, links_per_paper = calc_papers_twitter_score(papers_to_update)
     dnow_utc = datetime.datetime.now()
     dminus = dnow_utc - datetime.timedelta(days=30)
-    all_papers = list(db_papers.find({'time_published': {'$gt': dminus}}))
+    all_papers = list(db_papers.find({'$or': [{'time_published': {'$gt': dminus}}, {'_id': {'$in': papers_to_update}}]}))
     for cur_p in all_papers:
+        logger.info(f'Updating paper {cur_p["_id"]}')
         new_p_score = score_per_paper.get(cur_p['_id'], 0)
         old_p_score = cur_p.get('twitter_score', 0)
         twitter_score = max(new_p_score, old_p_score)
@@ -201,6 +198,11 @@ def find_num_replies(t):
         return 0
 
 
+def get_pids_in_db(arxiv_pids):
+    papers_in_db = list(db_papers.find({'_id': {'$in': arxiv_pids}}, {'_id': 1}))
+    return [x['_id'] for x in papers_in_db]
+
+
 def process_tweets(tweets_raw_data):
     logger.info('Process tweets')
     dnow_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -217,8 +219,11 @@ def process_tweets(tweets_raw_data):
         if r.id_str in unique_tweet_ids: continue
 
         arxiv_pids = extract_arxiv_pids(r)
-        # arxiv_pids = list(db_papers.find({'_id': {'$in': arxiv_pids}}))  # filter to those that are in our paper db
         if not arxiv_pids : continue
+        arxiv_pids = get_pids_in_db(arxiv_pids)
+        if not arxiv_pids:
+            logger.info(f'Arxiv pids are not in DB - tweet {r.id_str}')
+            continue
         if r.author.screen_name in banned: continue
 
         papers_to_update += arxiv_pids
