@@ -95,7 +95,7 @@ function addPapers(num, dynamic) {
   if(papers.length === 0) { return true; } // nothing to display, and we're done
 
   var root = d3.select("#rtable");
-  var twtr_score_field = QueryString.age_decay === '1' ? 'twtr_score_dec' : 'twtr_score';
+  var twtr_score_field = window.location.pathname.includes('oldhype') ? 'hype_score' : (QueryString.age_decay === '1' ? 'twtr_score_dec' : 'twtr_score');
 
   var base_ix = pointer_ix;
   for(var i=0;i<num;i++) {

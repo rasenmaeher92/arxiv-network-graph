@@ -151,6 +151,7 @@ def encode_json(ps, n=10, send_images=False, send_abstracts=True):
             struct['img'] = '/static/thumbs/' + idvv + '.pdf.jpg'
         struct['tags'] = [t['term'] for t in p['tags']]
 
+        struct['hype_score'] = p.get('hype_score', 0)
         # render time information nicely
         timestruct = dateutil.parser.parse(p['updated'])
         struct['published_time'] = '%s/%s/%s' % (timestruct.month, timestruct.day, timestruct.year)
