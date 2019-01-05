@@ -149,9 +149,12 @@ h1 {
 }
 .msg {
 	background-color: #EEF;
-	padding: 10px;
-	border-radius: 10px;
+	padding: 5px;
+	border-radius: 7px;
 	margin-top: 2px;
+	font-size: 12px;
+	text-align: center;
+	margin-bottom: 10px;
 }
 .paperdivider {
 	background-color: #EEF;

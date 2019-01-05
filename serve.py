@@ -292,23 +292,27 @@ def comment():
     comments.insert_one(entry)
     return 'OK'
 
+
 @app.route("/discussions", methods=['GET'])
 def discussions():
     # return most recently discussed papers
-    comms_cursor = comments.find().sort([('time_posted', pymongo.DESCENDING)]).limit(100)
+    comms_pids = list(comments.find({}, {'pid': 1, '_id': 0}).sort([('time_posted', pymongo.DESCENDING)]).limit(100))
+    comms_pids = [c['pid'] for c in comms_pids]
 
-    # get the (unique) set of papers.
-    papers = []
-    have = set()
-    for e in comms_cursor:
-        pid = e['pid']
-        cur_p = _get_paper_data(pid)
-        if cur_p and not pid in have:
-            have.add(pid)
-            papers.append(cur_p)
+    # remove duplicates
+    seen = set()
+    comms_pids = [x for x in comms_pids if not (x in seen or seen.add(x))]
 
-    ctx = default_context(papers, render_format="discussions")
+    # get papers for pids
+    papers = list(db_papers.find({'_id': {'$in': comms_pids}}))
+    papers = {p['_id']:p for p in papers}
+
+    # sort by comments order
+    sorted_papers = [papers[x] for x in comms_pids]
+
+    ctx = default_context(sorted_papers, render_format="discussions")
     return render_template('main.html', **ctx)
+
 
 @app.route('/toggletag', methods=['POST'])
 def toggletag():

@@ -281,9 +281,7 @@ $(document).ready(function(){
   var tf = QueryString.timefilter; if(typeof tf === 'undefined') { tf = 'week'; }
   var link_endpoint = '/';
   if(render_format === 'recent') { link_endpoint = ''; }
-  if(render_format === 'top') { link_endpoint = 'top'; }
   if(render_format === 'recommend') { link_endpoint = 'recommend'; }
-  if(render_format === 'friends') { link_endpoint = 'friends'; }
   if(render_format === 'toptwtr') { link_endpoint = 'toptwtr'; }
   if(render_format === 'oldhype') { link_endpoint = 'oldhype'; }
   if(render_format === 'discussions') { link_endpoint = 'discussions'; }
@@ -353,14 +351,10 @@ $(document).ready(function(){
   }
 
   // in top tab: color current choice
-  if( render_format === 'recent') { d3.select('#tabrecent').classed('tab-selected', true); }
-  if( render_format === 'top') { d3.select('#tabtop').classed('tab-selected', true); }
-  if( render_format === 'toptwtr') { d3.select('#tabtwtr').classed('tab-selected', true); }
-  if( render_format === 'oldhype') { d3.select('#taboldhype').classed('tab-selected', true); }
-  if( render_format === 'friends') { d3.select('#tabfriends').classed('tab-selected', true); }
-  if( render_format === 'discussions') { d3.select('#tabdiscussions').classed('tab-selected', true); }
-  if( render_format === 'recommend') { d3.select('#tabrec').classed('tab-selected', true); }
-  if( render_format === 'library') { d3.select('#tablib').classed('tab-selected', true); }
+  $('#pagebar .nav-link').removeClass('active');
+  $(`.${render_format}`).addClass('active');
+  $('#pagebar .dropdown-toggle').text($(`.${render_format}`)[0].text);
+
 
   $("#goaway").on('click', function(){
     $("#prompt").slideUp('fast');

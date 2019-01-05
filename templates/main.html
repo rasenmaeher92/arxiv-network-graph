@@ -52,11 +52,34 @@
             </div>
 
             <div id="pagebar">
-              <div class="pagelink" id="tabrecent"><a href="/">most recent</a></div>
-              <div class="pagelink" id="tabtwtr"><a href="/toptwtr">Top Twitter</a></div>
-              <div class="pagelink" id="taboldhype"><a href="/oldhype">Old but hyped</a></div>
-              <div class="pagelink" id="tabdiscussions"><a href="/notes">discussions</a></div>
-              <div class="pagelink" id="tablib"><a href="/library">library</a></div>
+                <ul class="nav nav-tabs">
+                    <li class="nav-item dropdown d-md-none">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Most recent</a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item recent" href="/">Most recent</a>
+                            <a class="dropdown-item toptwtr" href="/toptwtr">Top Twitter</a>
+                            <a class="dropdown-item oldhype" href="/oldhype">Old but hyped</a>
+                            <a class="dropdown-item discussions" href="/discussions">Discussions</a>
+                            <a class="dropdown-item library" href="/library">Library</a>
+                        </div>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a class="nav-link recent" href="/">most recent</a>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a class="nav-link toptwtr" href="/toptwtr">Top Twitter</a>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a class="nav-link oldhype" href="/oldhype">Old but hyped</a>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a class="nav-link discussions" href="/discussions">Discussions</a>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a class="nav-link library" href="/library">Library</a>
+                    </li>
+
+                </ul>
             </div>
 
             <!-- this div will be rendered into dynamcially at init with JS -->
