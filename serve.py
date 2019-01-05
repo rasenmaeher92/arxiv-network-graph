@@ -390,6 +390,8 @@ def oldhype():
         for p in t.get('pids', []):
             papers_scores[p] += score
 
+    papers_scores = dict(Counter(papers_scores).most_common(100))
+
     papers = list(db_papers.find({'_id': {'$in': list(papers_scores.keys())}}))
     for p in papers:
         p['hype_score'] = papers_scores[p['_id']]
