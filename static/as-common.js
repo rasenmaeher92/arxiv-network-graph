@@ -285,10 +285,11 @@ $(document).ready(function(){
   if(render_format === 'recommend') { link_endpoint = 'recommend'; }
   if(render_format === 'friends') { link_endpoint = 'friends'; }
   if(render_format === 'toptwtr') { link_endpoint = 'toptwtr'; }
+  if(render_format === 'oldhype') { link_endpoint = 'oldhype'; }
   if(render_format === 'discussions') { link_endpoint = 'discussions'; }
 
-  var time_ranges = ['day', '3days', 'week', 'month', 'year', 'alltime'];
-  var time_txt = {'day':'Last day', '3days': 'Last 3 days', 'week': 'Last week', 'month': 'Last month', 'year': 'Last year', 'alltime': 'All time'}
+  var time_ranges = ['day', '3days', 'week', '2weeks', 'month', 'year', 'alltime'];
+  var time_txt = {'day':'Last day', '3days': 'Last 3 days', 'week': 'Last week', '2weeks': '2 weeks', 'month': 'Last month', 'year': 'Last year', 'alltime': 'All time'}
   var time_range = tf;
 
   // set up time filtering options
@@ -334,6 +335,18 @@ $(document).ready(function(){
     document.getElementById('age_decay').checked = (QueryString.age_decay === '1' ? true : false);
   }
 
+  // time choices for top tweets
+  if(render_format === 'oldhype') {
+    var tf = QueryString.timefilter; if(typeof tf === 'undefined') { tf = 'week'; } // default here is day
+    var time_ranges = ['day', 'week', '2weeks'];
+    var elt = d3.select('#recommend-time-choice');
+    for(var i=0;i<time_ranges.length;i++) {
+      var time_range = time_ranges[i];
+      var aelt = elt.append('a').attr('href', '/'+link_endpoint+'?'+'timefilter='+time_range);
+      var delt = aelt.append('div').classed('timechoice', true).html(time_txt[time_range]);
+      if(tf == time_range) { delt.classed('timechoice-selected', true); } // also render as chosen
+    }
+  }
   var xb = $("#xbanner");
   if(xb.length !== 0) {
     xb.click(function(){ $("#banner").slideUp('fast'); })
@@ -343,6 +356,7 @@ $(document).ready(function(){
   if( render_format === 'recent') { d3.select('#tabrecent').classed('tab-selected', true); }
   if( render_format === 'top') { d3.select('#tabtop').classed('tab-selected', true); }
   if( render_format === 'toptwtr') { d3.select('#tabtwtr').classed('tab-selected', true); }
+  if( render_format === 'oldhype') { d3.select('#taboldhype').classed('tab-selected', true); }
   if( render_format === 'friends') { d3.select('#tabfriends').classed('tab-selected', true); }
   if( render_format === 'discussions') { d3.select('#tabdiscussions').classed('tab-selected', true); }
   if( render_format === 'recommend') { d3.select('#tabrec').classed('tab-selected', true); }

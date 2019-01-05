@@ -6,7 +6,8 @@ import re
 import time
 import argparse
 import uuid
-from collections import Counter
+from collections import Counter, defaultdict
+from math import log10
 
 import dateutil.parser
 from random import randrange, uniform
@@ -123,7 +124,7 @@ def papers_filter_version(papers, v):
     filtered = [p for p in papers if p['_version'] == intv]
     return filtered
 
-def encode_json(ps, n=10, send_images=True, send_abstracts=True):
+def encode_json(ps, n=10, send_images=False, send_abstracts=True):
 
     libids = set()
     if g.user:
@@ -364,8 +365,40 @@ def toptwtr():
     papers = list(db_papers.find({'time_published': {'$gt': dminus}}).sort(sort_field, pymongo.DESCENDING))
 
     ctx = default_context(papers, render_format='toptwtr', tweets=tweets,
+                          msg=f'Top new papers from the last {days} days on Twitter')
+    return render_template('main.html', **ctx)
+
+
+def tweet_score(t):
+    followers_score = max(log10(t['user_followers_count'] + 1), 1)
+    return (t['likes'] + 2 * t['retweets']) * (t.get('replies', 0) * 4 + 0.5) / followers_score
+
+@app.route('/oldhype', methods=['GET'])
+def oldhype():
+    """ return top papers """
+    ttstr = request.args.get('timefilter', 'week') # default is day
+    legend = {'day': 1, '3days': 3, 'week': 7, '2weeks': 14}
+    days = legend.get(ttstr)
+    dnow_utc = datetime.datetime.now()
+    dminus = dnow_utc - datetime.timedelta(days=int(days))
+    new_tweets = list(db_tweets.find({'created_at_date': {'$gt': dminus}}))
+    scores = list(map(tweet_score, new_tweets))
+
+    papers_scores = defaultdict(int)
+    for t, score in zip(new_tweets, scores):
+        for p in t.get('pids', []):
+            papers_scores[p] += score
+
+    papers = list(db_papers.find({'_id': {'$in': list(papers_scores.keys())}}))
+    for p in papers:
+        p['hype_score'] = papers_scores[p['_id']]
+
+    papers = sorted(papers, key=lambda x: x['hype_score'], reverse=True)
+
+    ctx = default_context(papers, render_format='oldhype',
                           msg=f'Top papers mentioned on Twitter over last {days} days')
     return render_template('main.html', **ctx)
+
 
 @app.route('/library')
 def library():
@@ -638,7 +671,7 @@ if __name__ == "__main__":
     mdb = client.arxiv
     db_papers = mdb.papers
     db_authors = mdb.authors
-    tweets = mdb.tweets
+    db_tweets = mdb.tweets
     sem_sch_papers = mdb.sem_sch_papers
     sem_sch_authors = mdb.sem_sch_authors
 
