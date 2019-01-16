@@ -39,12 +39,25 @@ def send_query(p, is_arxiv):
 
 def fetch_paper_data(p, is_arxiv=True):
     p_id = p['_id']
-    res = send_query(p, is_arxiv)
+    retries = 3
+    res = None
+    success = False
+
+    for i in range(retries):
+        try:
+            res = send_query(p, is_arxiv)
+            success = True
+            break
+        except Exception as e:
+            logger.warning(f'Failed to fetch paper data - {e}')
+            sleep(1)
+
+    if not success:
+        return None
+
     if not res:
-        return {'_id': p_id, 'title': p['title'], 'authors': p['authors'],
-                'last_rec_update': datetime.utcnow(), 'time_updated': p['time_updated'],
-                'time_published': p['time_published'],
-                'found': 0}
+        res = {'_id': p_id, 'title': p['title'], 'authors': p['authors'], 'last_rec_update': datetime.utcnow(),
+               'time_updated': p['time_updated'],'time_published': p['time_published'], 'found': 0}
     return res
 
 
@@ -60,9 +73,12 @@ def update_all_papers(age_days=5):
         cur_sem_sch = sem_sch_papers.find_one({'_id': p['_id']})
         if not cur_sem_sch or (datetime.utcnow() - cur_sem_sch['last_rec_update']).total_seconds() > min_days_to_update:
             res = fetch_paper_data(p)
-            sem_sch_papers.update({'_id': res['_id']}, {'$set': res}, True)
-            for a in res['authors']:
-                sem_sch_authors.update({'_id': a['name']}, {}, True)
+            if res:
+                sem_sch_papers.update({'_id': res['_id']}, {'$set': res}, True)
+                for a in res['authors']:
+                    sem_sch_authors.update({'_id': a['name']}, {}, True)
+            else:
+                logger.error('Failed to fetch paper data - {}'.format(p['_id']))
             sleep(1)
         else:
             logger.debug('Paper is already in DB')
