@@ -35,9 +35,11 @@ def wayr():
     resp.set_cookie(VOTING_COOKIE, str(uuid.uuid4()))
     return resp
 
+
 def publish_dt_str(p):
     timestruct = p.get('time_published')
     return '{}/{}/{}'.format(timestruct.month, timestruct.day, timestruct.year)
+
 
 def papers_json(paper_votes, papers_data):
     global tot_votes
@@ -82,7 +84,8 @@ def autocomplete():
     if len(q) <= 1:
         return jsonify({'data': []})
 
-    papers = list(db_papers.find({'$or': [{'_id': q}, {'$text': {'$search': q}}]}, {'score': {'$meta': "textScore"}}).limit(MAX_ITEMS))
+    papers = db_papers.find({'$or': [{'_id': q}, {'$text': {'$search': q}}]}, {'score': {'$meta': "textScore"}})
+    papers = list(papers.sort([('score', {'$meta': 'textScore'})]).limit(MAX_ITEMS))
     p_ids = [p['_id'] for p in papers]
     paper_votes = get_votes_summary(p_ids)
     return jsonify(papers_json(paper_votes, papers))
