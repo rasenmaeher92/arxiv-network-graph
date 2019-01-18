@@ -43,9 +43,12 @@ else:
     SECRET_KEY = 'devkey, should be in a file'
 app = Flask(__name__)
 app.config.from_object(__name__)
-app.wsgi_app = SassMiddleware(app.wsgi_app, {
-    __name__: ('static/scss', 'static/css', '/static/css')
-})
+
+if app.debug:
+    app.wsgi_app = SassMiddleware(app.wsgi_app, {
+        __name__: ('static/scss', 'static/css', '/static/css')
+    })
+
 app.register_blueprint(voting_app)
 
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["5000 per hour", "100 per minute"])
