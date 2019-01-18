@@ -145,6 +145,7 @@ $input-size: 26px;
     }
 }
 
+
 #vote {
     padding-left: 2rem;
     padding-right: 2rem;
@@ -152,6 +153,10 @@ $input-size: 26px;
     box-shadow: 2px 2px 2px 0 rgba(0,0,0,0.16);
     z-index:1000;
     background-color: white;
+
+    &:hover {
+        background-color: #17a2b8;
+    }
 }
 
 .sticky {

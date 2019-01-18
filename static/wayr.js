@@ -13,8 +13,16 @@ $.get('/wayr/current_votes', function(data) {
 $("body").on('click', '#vote', function(e) {
     var res = [];
     var button = $(this);
-    $(this).prop("disabled",true);
     $('.paper-option:checked').each(function() {res.push(this.id)});
+    if (res.length == 0) {
+        $.toast({
+            text: 'Please select papers first',
+            loader: false,
+            hideAfter: 2000,
+        });
+        return;
+    };
+    $(this).prop("disabled",true);
     $.ajax({
         type: "POST",
         url: '/wayr/vote',
@@ -22,7 +30,12 @@ $("body").on('click', '#vote', function(e) {
         contentType: "application/json"
     })
     .done(function(data) {
-        $('.message').html(data.message);
+        $.toast({
+            text: data.message,
+            bgColor: '#17a2b8',
+            loader: false,
+            hideAfter: 3000,
+        })
     })
     .always(function() {
         $(button).prop("disabled",false);

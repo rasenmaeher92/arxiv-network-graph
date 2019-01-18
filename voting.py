@@ -78,9 +78,12 @@ def autocomplete():
 
 @voting_app.route(f"{BASE_PATH}/vote", methods=['POST'])
 def vote():
-    data = request.json.get('ids', [])
+    ids = request.json.get('ids', [])
     cookie = request.cookies.get(VOTING_COOKIE, '')
-    inserted_data = [{'pid': d, 'dt': datetime.datetime.utcnow(), 'ip': request.remote_addr, 'cookie': cookie} for d in data]
-    db_votes.insert_many(inserted_data)
+    prev_votes = db_votes.find({'$and': [{'$or': [{'cookie': cookie}, {'ip': request.remote_addr}]}, {'pid': {'$in': ids}}]}, {'_id': 0, 'pid': 1})
+    prev_votes = set([v['pid'] for v in prev_votes])
+    inserted_data = [{'pid': d, 'dt': datetime.datetime.utcnow(), 'ip': request.remote_addr, 'cookie': cookie} for d in ids if d not in prev_votes]
+    if inserted_data:
+        db_votes.insert_many(inserted_data)
     return jsonify({'message': 'Thanks for voting!'})
 
