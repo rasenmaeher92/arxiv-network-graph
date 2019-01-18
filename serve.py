@@ -18,6 +18,7 @@ from flask import Flask, request, session, url_for, redirect, \
     render_template, g, flash, jsonify, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from sassutils.wsgi import SassMiddleware
 from werkzeug import check_password_hash, generate_password_hash
 from flask_caching import Cache
 
@@ -29,17 +30,24 @@ from logger import logger_config
 
 
 from utils import strip_version, isvalidid, Config
+from voting import voting_app
 
 # various globals
 # -----------------------------------------------------------------------------
 
 # database configuration
+
 if os.path.isfile('secret_key.txt'):
     SECRET_KEY = open('secret_key.txt', 'r').read()
 else:
     SECRET_KEY = 'devkey, should be in a file'
 app = Flask(__name__)
 app.config.from_object(__name__)
+app.wsgi_app = SassMiddleware(app.wsgi_app, {
+    __name__: ('static/scss', 'static/css', '/static/css')
+})
+app.register_blueprint(voting_app)
+
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["5000 per hour", "100 per minute"])
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
