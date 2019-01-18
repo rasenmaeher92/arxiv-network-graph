@@ -58,7 +58,7 @@ $input-size: 26px;
         font-size: 0.9rem;
       }
 
-      .paper-link {
+      .paper-link, .paper-date {
         color: #b3b3b3;
         font-size: 0.8rem;
         margin-left: 2px;
@@ -131,19 +131,6 @@ $input-size: 26px;
 
 }
 
-.easy-autocomplete-container {
-    z-index: 1000;
-
-    ul {
-        max-height: 300px;
-        overflow-y: scroll;
-        border-bottom: 1px solid #ccc;
-
-        li {
-            border-bottom: 1px solid #e8e8e8;
-        }
-    }
-}
 
 
 #vote {

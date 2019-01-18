@@ -5,10 +5,15 @@ function update_papers(data) {
     var html = Mustache.render(template, data);
     $("#papers_score").html(html);
 }
-$.get('/wayr/current_votes', function(data) {
-    original_papers = data;
-    update_papers(data);
-});
+
+function fetch_score() {
+    $.get('/wayr/current_votes', function(data) {
+        original_papers = data;
+        update_papers(data);
+    });
+}
+
+fetch_score();
 
 $("body").on('click', '#vote', function(e) {
     var res = [];
@@ -35,7 +40,8 @@ $("body").on('click', '#vote', function(e) {
             bgColor: '#17a2b8',
             loader: false,
             hideAfter: 3000,
-        })
+        });
+        setTimeout(function(){ $('#searchInput').val(''); fetch_score(); }, 1000);
     })
     .always(function() {
         $(button).prop("disabled",false);

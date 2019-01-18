@@ -11,3 +11,4 @@ data
 *.DS_Store
 twitter.txt
 *.log
+reddit_keys.json
