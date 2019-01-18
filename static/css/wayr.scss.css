@@ -81,7 +81,7 @@
   position: relative; }
   .search #searchInput {
     width: 100%;
-    padding: 7px 20px 7px 8px;
+    padding: 7px 20px 7px 25px;
     outline: none;
     color: #9DBFAF;
     font-size: 14px;
@@ -90,13 +90,21 @@
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
     color: #555;
     float: none; }
+  .search .search-icon {
+    position: absolute;
+    left: 7px;
+    font-size: 0.75rem;
+    top: 50%;
+    color: #949494;
+    transform: translateY(-50%); }
   .search .clear-input {
     position: absolute;
     right: 10px;
     top: 50%;
-    color: grey;
+    color: #949494;
     cursor: pointer;
-    transform: translateY(-50%); }
+    transform: translateY(-50%);
+    display: none; }
 
 #vote {
   padding-left: 2rem;

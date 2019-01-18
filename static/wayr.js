@@ -50,6 +50,13 @@ $("body").on('click', '#vote', function(e) {
 
 $('#searchInput').on('input', function(e) {
   if (e.which == 13) return false;
+  if ($(this).val().length == 0) {
+    $('.clear-input').hide();
+  }
+  else {
+    $('.clear-input').show();
+  };
+
   if ($(this).val().length < 2) {
     update_papers(original_papers);
     return false;
@@ -57,8 +64,14 @@ $('#searchInput').on('input', function(e) {
   $.get('/wayr/autocomplete?q=' + $(this).val()).done(function(data) {
     if (data.data !== undefined && data.data.length > 0) {
         update_papers(data);
+        $('.clear-input').hide();
     }
   })
+});
+
+$('.clear-input').on('click', function(e) {
+    $('#searchInput').val('');
+    update_papers(original_papers);
 });
 
 
@@ -74,9 +87,4 @@ $(window).scroll(function (event) {
         $('#main_section').css('margin-top', '15px')
         $('#vote').removeClass('sticky');
     }
-});
-
-$('.clear-input').on('click', function(e) {
-    $('#searchInput').val('');
-    update_papers(original_papers);
 });
