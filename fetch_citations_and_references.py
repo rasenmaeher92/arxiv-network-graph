@@ -50,7 +50,7 @@ def fetch_paper_data(p, is_arxiv=True):
             break
         except Exception as e:
             logger.warning(f'Failed to fetch paper data - {e}')
-            sleep(1)
+            sleep(10)
 
     if not success:
         return None
@@ -79,7 +79,7 @@ def update_all_papers(age_days=5):
                     sem_sch_authors.update({'_id': a['name']}, {}, True)
             else:
                 logger.error('Failed to fetch paper data - {}'.format(p['_id']))
-            sleep(3)
+            sleep(5)
         else:
             logger.debug('Paper is already in DB')
 
