@@ -12,3 +12,5 @@ data
 twitter.txt
 *.log
 reddit_keys.json
+.mypy_cache/*
+.vscode/*
