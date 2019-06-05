@@ -1,4 +1,63 @@
 
+# Description
+
+This fork of arxiv-sanity and arxiv network graph aims at creating a visual tool for the scientific paper writing process.
+It should aid its users through the stages of literature research, topic determination and paper writing.
+It does so by providing a graph-based way to explore papers and their authors.
+
+
+# How to Use
+
+To use this project run the following scripts:
+1. `fetch_papers.py` to get the papers from arxiv.org
+2. `fetch_citations_and_references.py` to get meta data from semanticscholar.org
+3. `create_authors.py`
+4. `create_index.py`
+5. `run_background_tasks.py` to start background tasks scheduler. 
+6. `serve.py` to start the flask server.
+7. go to localhost:5000/citations_network
+
+# (Planned) New Features
+
+## Semantic Ordering
+- use arxiv-sanity similarity scores code to introduce semantic edges in the graph
+- 
+
+## Filtering
+- provide node filtering options to filter citations and references nodes
+- filters for citations count, age, etc.
+- combination options for above filters
+-
+
+## Usability
+- introduce sidebar to control the following options
+- tagging of papers and authors
+- list papers and authors in side bar with all info
+- user system to save seed papers and authors
+- show pdf thumbnail in paper desc
+- query google scholar image for authors
+-
+
+## Data Visualization
+- use appearance, color and size of nodes to indicate citation count, age, etc. 
+-
+
+
+
+# (Planned) Bug Fixes
+- sometimes edges have duplicates
+- papers do not appear when magnicfication icon is pressed in description field
+
+# (Planned) Architectural Changes
+- move paper fetching to background of `serve.py`
+- docker containrization? 
+- unify branding
+- remove/hid arxiv-sanity front facing part
+
+(contributes welcome)
+
+# Old readme below
+
 # MLG - Visual Machine Learning arxiv Graph and Textual explorer
 
 MLG (Machine Learning Graph) is a visual representation of ML researchers and papers, and the connections between them.
