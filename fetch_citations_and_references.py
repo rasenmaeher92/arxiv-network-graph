@@ -79,9 +79,10 @@ def update_all_papers(age_days=5):
                     sem_sch_authors.update({'_id': a['name']}, {}, True)
             else:
                 logger.error('Failed to fetch paper data - {}'.format(p['_id']))
-            sleep(5)
+            # sleep(5)
+            print("{} of {}".format(idx, len(papers)))
         else:
-            logger.debug('Paper is already in DB')
+            logger.debug('Paper {} of {} is already in DB'.format(idx, len(papers)))
 
     logger.info('Finished updating refs')
 
