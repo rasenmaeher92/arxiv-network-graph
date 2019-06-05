@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     logger.info('Start background tasks')
 
-    schedule.every(30).minutes.do(run_threaded, main_twitter_fetcher)
+    # schedule.every(30).minutes.do(run_threaded, main_twitter_fetcher)
     schedule.every(3).hours.do(run_threaded, fetch_papers_main)
     schedule.every().saturday.at("00:10").do(run_threaded, update_all_papers)
 
