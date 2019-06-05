@@ -61,7 +61,7 @@ function toggle_spinner(to_show) {
 var physics_options = {
         enabled: true,
         stabilization: {
-          enabled: true,
+          enabled: false,
           iterations: 100,
         },
         solver: 'forceAtlas2Based',
@@ -168,7 +168,7 @@ function get_author_link(name) {
 }
 
 function set_network_physics(status) {
-    physics_options['enabled'] = status;
+    physics_options['enabled'] = true;
     network.setOptions({physics: physics_options});
 }
 
@@ -391,7 +391,7 @@ $('#redraw').on('click', function(e) {
     network.stabilize(100);
 
     network.on('stabilizationIterationsDone', function() {
-        network.setOptions({physics: false});
+        // network.setOptions({physics: false});
         setTimeout(function(){ network.fit(); toggle_spinner(false);}, 10);
 
     });
