@@ -195,6 +195,8 @@ function expand_author(node_id, res) {
     handle_author_papers(res, nodes, edges, node_id);
     var cur_ids = network.body.nodeIndices;
     nodes = nodes.filter(n => cur_ids.indexOf(n.id) < 0);
+    nodes = remove_dups(nodes);
+    edges = remove_dups(edges);
     all_nodes.add(nodes);
     all_edges.add(edges);
 }
